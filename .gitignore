@@ -1,0 +1,7 @@
+# Java
+*.class
+# C
+*.o
+# Wykonywalne
+*.exe
+*.out
