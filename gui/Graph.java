@@ -1,10 +1,10 @@
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class Graph {
-  Map<Integer, Vertex> vertices = new HashMap<>();
+  Map<Integer, Vertex> vertices = new TreeMap<>();
   List<Edge> edges = new ArrayList<>();
   private double minX, maxX, minY, maxY;
 
@@ -28,6 +28,10 @@ public class Graph {
 
   public int getEdgesCount() {
     return edges.size();
+  }
+
+  public Map<Integer, Vertex> getVertices() {
+    return vertices;
   }
 
   public void calculateBounds() {

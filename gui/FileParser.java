@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
@@ -67,5 +68,34 @@ public class FileParser {
       readVertices(nodePath, graph);
     }
     readEdges(edgePath, graph);
+  }
+
+  public void saveToText(String path, Graph graph) throws Exception {
+    if (graph.getVertexCount() != 0) {
+      try (PrintWriter writer = new PrintWriter(path)) {
+        writer.println(graph.getVertexCount());
+
+        graph.getVertices().forEach((key, value) -> {
+          writer.printf(Locale.US, "%d %.4f %.4f%n", key, value.getX(), value.getY());
+        });
+      }
+    }
+  }
+
+  public void saveToBinary(String path, Graph graph) throws Exception {
+    if (graph.getVertexCount() != 0) {
+      int vCount = graph.getVertexCount();
+      ByteBuffer buffer = ByteBuffer.allocate(4 + (vCount * 20));
+      buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+      buffer.putInt(vCount);
+      graph.getVertices().forEach((key, value) -> {
+        buffer.putInt(key);
+        buffer.putDouble(value.getX());
+        buffer.putDouble(value.getY());
+      });
+
+      Files.write(Paths.get(path), buffer.array());
+    }
   }
 }
