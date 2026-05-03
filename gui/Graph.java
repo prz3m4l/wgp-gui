@@ -1,10 +1,11 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Graph {
-  HashMap<Integer, Vertex> vertices = new HashMap<Integer, Vertex>();
-  List<Edge> edges = new ArrayList<Edge>();
+  Map<Integer, Vertex> vertices = new HashMap<>();
+  List<Edge> edges = new ArrayList<>();
   private double minX, maxX, minY, maxY;
 
   public void addVertex(int id, double x, double y) {
