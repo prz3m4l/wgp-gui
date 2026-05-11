@@ -9,6 +9,7 @@ public class GraphPanel extends JPanel {
     private boolean showLabels = true;
     private boolean showWeights = false;
     private static final int V_RAD = 12;
+    private double zoom = 1.0;
 
     public GraphPanel(Graph graph, Main parent) {
         // Konfiguracja panelu i obsługa myszy
@@ -18,15 +19,22 @@ public class GraphPanel extends JPanel {
         MouseAdapter ma = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                selectedVertex = findVertex(e.getX(), e.getY());
+                double tx = (getWidth() / 2.0) * (1.0 - zoom);
+                double ty = (getHeight() / 2.0) * (1.0 - zoom);
+                int mouseX = (int) ((e.getX() - tx) / zoom);
+                int mouseY = (int) ((e.getY() - ty) / zoom);
+                
+                selectedVertex = findVertex(mouseX, mouseY);
                 parent.updateSelectedInfo(selectedVertex);
                 repaint();
             }
             @Override
             public void mouseDragged(MouseEvent e) {
                 if (selectedVertex != null) {
-                    selectedVertex.setX(e.getX());
-                    selectedVertex.setY(e.getY());
+                    double tx = (getWidth() / 2.0) * (1.0 - zoom);
+                    double ty = (getHeight() / 2.0) * (1.0 - zoom);
+                    selectedVertex.setX((e.getX() - tx) / zoom);
+                    selectedVertex.setY((e.getY() - ty) / zoom);
                     parent.updateSelectedInfo(selectedVertex);
                     repaint();
                 }
@@ -53,13 +61,17 @@ public class GraphPanel extends JPanel {
         
         double gWidth = maxX - minX;
         double gHeight = maxY - minY;
-        if (gWidth == 0) gWidth = 1; if (gHeight == 0) gHeight = 1;
+        if (gWidth == 0) gWidth = 100; if (gHeight == 0) gHeight = 100;
 
-        double scale = Math.min((getWidth() - 100) / gWidth, (getHeight() - 100) / gHeight);
+        double scale = Math.min((getWidth() - 150) / gWidth, (getHeight() - 150) / gHeight);
+        if (scale > 2.0) scale = 2.0;
+
+        double offsetX = (getWidth() - gWidth * scale) / 2.0;
+        double offsetY = (getHeight() - gHeight * scale) / 2.0;
         
         for (Vertex v : graph.getVertices().values()) {
-            v.setX(50 + (v.getX() - minX) * scale);
-            v.setY(50 + (v.getY() - minY) * scale);
+            v.setX(offsetX + (v.getX() - minX) * scale);
+            v.setY(offsetY + (v.getY() - minY) * scale);
         }
     }
 
@@ -69,6 +81,12 @@ public class GraphPanel extends JPanel {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // Zoom od środka ekranu
+        double tx = (getWidth() / 2.0) * (1.0 - zoom);
+        double ty = (getHeight() / 2.0) * (1.0 - zoom);
+        g2.translate(tx, ty);
+        g2.scale(zoom, zoom);
 
         // Rysowanie krawędzi
         g2.setColor(Color.DARK_GRAY);
@@ -111,5 +129,6 @@ public class GraphPanel extends JPanel {
     // Zarządzanie opcjami widoku
     public void setShowLabels(boolean s) { this.showLabels = s; repaint(); }
     public void setShowWeights(boolean s) { this.showWeights = s; repaint(); }
+    public void setZoom(double z) { this.zoom = z; repaint(); }
     public Vertex getSelectedVertex() { return selectedVertex; }
 }

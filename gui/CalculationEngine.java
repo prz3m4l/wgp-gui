@@ -40,8 +40,12 @@ public class CalculationEngine {
     switch (exitCode) {
       case 2:
         return "Silnik C nie może otworzyć pliku wejściowego. Sprawdź, czy plik istnieje i czy masz uprawnienia do odczytu.";
+      case 3:
+        return "Błąd formatu danych w pliku (kod 3). Upewnij się, że plik krawędzi zawiera poprawne linie (np. 'e1 1 2 1.0') i nie posiada nagłówków ani komentarzy.";
       case 4:
         return "Nie można utworzyć pliku wynikowego przez program C. Sprawdź uprawnienia katalogu docelowego.";
+      case 5:
+        return "Błąd parametrów (kod 5): Silnik nie rozpoznał nazwy algorytmu. Upewnij się, że przelewasz 'fr' lub 'tutte'.";
       case 7:
         return "Silnik obliczeniowy zgłosił błąd alokacji pamięci (kod 7). Graf może być zbyt duży. Spróbuj zmniejszyć liczbę wierzchołków.";
       case 8:

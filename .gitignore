@@ -5,3 +5,6 @@
 # Wykonywalne
 *.exe
 *.out
+
+gui/wynik.txt
+data
