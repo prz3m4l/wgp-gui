@@ -25,17 +25,27 @@ public class FileParser {
   }
 
   private void readEdges(String path, Graph graph) throws Exception {
-    if (graph.getVertexCount() != 0) {
-      File file = new File(path);
-      try (Scanner scanner = new Scanner(file)) {
-        scanner.useLocale(Locale.US);
-        while (scanner.hasNext()) {
-          String name = scanner.next();
-          int sourceId = scanner.nextInt();
-          int targetId = scanner.nextInt();
-          double weight = scanner.nextDouble();
-          graph.addEdge(name, sourceId, targetId, weight);
+    File file = new File(path);
+    try (Scanner scanner = new Scanner(file)) {
+      scanner.useLocale(Locale.US);
+      while (scanner.hasNext()) {
+        String name = scanner.next();
+        if (!scanner.hasNextInt()) break; // Zabezpieczenie na koniec pliku
+        int sourceId = scanner.nextInt();
+        if (!scanner.hasNextInt()) break;
+        int targetId = scanner.nextInt();
+        if (!scanner.hasNextDouble()) break;
+        double weight = scanner.nextDouble();
+        
+        // Jeśli wierzchołki nie istnieją, stwórz je (domyślna pozycja 0,0)
+        if (!graph.getVertices().containsKey(sourceId)) {
+          graph.addVertex(sourceId, 0, 0);
         }
+        if (!graph.getVertices().containsKey(targetId)) {
+          graph.addVertex(targetId, 0, 0);
+        }
+        
+        graph.addEdge(name, sourceId, targetId, weight);
       }
     }
   }
