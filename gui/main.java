@@ -48,17 +48,13 @@ public class Main extends JFrame {
         JMenuBar menuBar = new JMenuBar();
         JMenu fileMenu = new JMenu("Plik");
 
-        JMenuItem loadTxt = new JMenuItem("Wczytaj z pliku tekstowego");
+        JMenuItem loadTxt = new JMenuItem("Wczytaj graf");
         loadTxt.addActionListener(e -> openFile(false));
-        
-        JMenuItem loadBin = new JMenuItem("Wczytaj z pliku binarnego");
-        loadBin.addActionListener(e -> openFile(true));
 
         JMenuItem saveRes = new JMenuItem("Zapisz wyniki");
         saveRes.addActionListener(e -> saveAction(true));
 
         fileMenu.add(loadTxt);
-        fileMenu.add(loadBin);
         fileMenu.addSeparator();
         fileMenu.add(saveRes);
         
@@ -250,6 +246,10 @@ public class Main extends JFrame {
             }
             String pathToUse = (cleanedInputPath != null && !cleanedInputPath.isEmpty()) ? cleanedInputPath : currentInputPath;
             engine.runGraphAlgorithm(pathToUse, algoParam, iterations, false, graph);
+            
+            // Wymuś przeładowanie pozycji z pliku wynikowego
+            parser.loadFullGraph("wynik.txt", pathToUse, graph, false);
+            
             graphPanel.autofit();
             updateUIState("Obliczono układ (" + selectedAlgo + ")");
         } catch (Exception ex) {

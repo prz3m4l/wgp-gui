@@ -6,7 +6,14 @@ public class CalculationEngine {
   public void runGraphAlgorithm(String inputPath, String algorithm, int iterations, boolean binary, Graph graph)
       throws Exception {
     List<String> commands = new ArrayList<>();
-    commands.add("./graf_planarny");
+    
+    // Ustalenie ścieżki do silnika C w folderze core/
+    String enginePath = "core/graf_planarny";
+    if (System.getProperty("os.name").toLowerCase().contains("win")) {
+      enginePath = "core/graf_planarny.exe";
+    }
+    
+    commands.add(new java.io.File(enginePath).getAbsolutePath());
     commands.add("-i");
     commands.add(inputPath);
     commands.add("-o");

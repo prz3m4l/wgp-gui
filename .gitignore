@@ -6,5 +6,5 @@
 *.exe
 *.out
 
-gui/wynik.txt
+wynik.txt
 data
