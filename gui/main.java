@@ -12,8 +12,12 @@ public class Main extends JFrame {
     private JTextField xField = new JTextField(5);
     private JTextField yField = new JTextField(5);
     private JLabel idLabel = new JLabel("ID: -");
-    private JComboBox<String> algoCombo = new JComboBox<>(new String[]{"fr", "tutte"});
+    private JComboBox<String> algoCombo = new JComboBox<>(new String[]{"Fruchterman-Reingold", "Tutte"});
+    private JTextField iterField = new JTextField("600");
+    private JSlider zoomSlider = new JSlider(10, 200, 100);
+    private JPanel toolPanel;
     private String currentInputPath = "";
+    private String cleanedInputPath = "";
 
     public Main() {
         // Konfiguracja okna głównego
@@ -29,7 +33,9 @@ public class Main extends JFrame {
         // Inicjalizacja układu i paneli
         setLayout(new BorderLayout(5, 5));
         add(graphPanel, BorderLayout.CENTER);
-        add(createToolPanel(), BorderLayout.EAST);
+        toolPanel = createToolPanel();
+        add(toolPanel, BorderLayout.EAST);
+        setPanelEnabled(toolPanel, false);
         
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statusPanel.setBorder(BorderFactory.createEtchedBorder());
@@ -76,10 +82,29 @@ public class Main extends JFrame {
 
         algoCombo.setMaximumSize(new Dimension(180, 25));
         algoCombo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        algoCombo.addActionListener(e -> {
+            String selected = (String) algoCombo.getSelectedItem();
+            boolean isTutte = "Tutte".equalsIgnoreCase(selected);
+            iterField.setEnabled(!isTutte);
+            if (isTutte) {
+                iterField.setText("-");
+            } else if ("-".equals(iterField.getText())) {
+                iterField.setText("600");
+            }
+        });
         panel.add(algoCombo);
-        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+
+        JLabel iterLabel = new JLabel("Iteracje:");
+        iterLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(iterLabel);
         
-        // Sekcja algorytmu
+        iterField.setMaximumSize(new Dimension(180, 25));
+        iterField.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(iterField);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        // Wywołanie zewnętrznego silnika obliczeniowego
         JButton runBtn = new JButton("Uruchom");
         runBtn.addActionListener(e -> runAlgorithm());
         runBtn.setMaximumSize(new Dimension(180, 30));
@@ -88,8 +113,31 @@ public class Main extends JFrame {
 
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
+        // Sekcja widoku
+        JLabel viewTitle = new JLabel("WIDOK");
+        viewTitle.setFont(new Font("SansSerif", Font.BOLD, 11));
+        viewTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(viewTitle);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+
+        JLabel zoomLabel = new JLabel("Zoom:");
+        zoomLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(zoomLabel);
+        
+        zoomSlider.setAlignmentX(Component.CENTER_ALIGNMENT);
+        zoomSlider.addChangeListener(e -> {
+            graphPanel.setZoom(zoomSlider.getValue() / 100.0);
+        });
+        panel.add(zoomSlider);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+
         JButton autofitBtn = new JButton("Autofit");
-        autofitBtn.addActionListener(e -> { graphPanel.autofit(); repaint(); });
+        autofitBtn.addActionListener(e -> { 
+            zoomSlider.setValue(100);
+            graphPanel.setZoom(1.0);
+            graphPanel.autofit(); 
+            repaint(); 
+        });
         autofitBtn.setMaximumSize(new Dimension(180, 30));
         autofitBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(autofitBtn);
@@ -130,6 +178,13 @@ public class Main extends JFrame {
 
         panel.add(Box.createRigidArea(new Dimension(0, 20)));
 
+        JLabel displayTitle = new JLabel("WIDOCZNOŚĆ");
+        displayTitle.setFont(new Font("SansSerif", Font.BOLD, 11));
+        displayTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(displayTitle);
+
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+
         // Sekcja opcji wyświetlania
         JPanel checkPanel = new JPanel();
         checkPanel.setLayout(new BoxLayout(checkPanel, BoxLayout.Y_AXIS));
@@ -161,7 +216,9 @@ public class Main extends JFrame {
                     m.setAccessible(true);
                     m.invoke(parser, currentInputPath, graph);
                 }
+                setPanelEnabled(toolPanel, true);
                 updateUIState("Wczytano plik");
+                prepareCleanedFile();
             } catch (Exception ex) {
                 showError("Błąd wczytywania: " + ex.getCause().getMessage());
             }
@@ -175,10 +232,26 @@ public class Main extends JFrame {
             return;
         }
         try {
-            String algo = (String) algoCombo.getSelectedItem();
-            engine.runGraphAlgorithm(currentInputPath, algo, 600, false, graph);
+            String selectedAlgo = (String) algoCombo.getSelectedItem();
+            String algoParam = "fr"; // domyślnie dla Fruchterman-Reingold
+            if ("tutte".equalsIgnoreCase(selectedAlgo)) {
+                algoParam = "tutte";
+            }
+            
+            int iterations = 0;
+            if (!"tutte".equals(algoParam)) {
+                try {
+                    iterations = Integer.parseInt(iterField.getText().trim());
+                    if (iterations <= 0) throw new NumberFormatException();
+                } catch (NumberFormatException e) {
+                    showError("Iteracje muszą być liczbą całkowitą dodatnią!");
+                    return;
+                }
+            }
+            String pathToUse = (cleanedInputPath != null && !cleanedInputPath.isEmpty()) ? cleanedInputPath : currentInputPath;
+            engine.runGraphAlgorithm(pathToUse, algoParam, iterations, false, graph);
             graphPanel.autofit();
-            updateUIState("Obliczono układ");
+            updateUIState("Obliczono układ (" + selectedAlgo + ")");
         } catch (Exception ex) {
             showError(ex.getMessage());
         }
@@ -236,6 +309,42 @@ public class Main extends JFrame {
     // Wyświetlanie dialogu z błędem
     private void showError(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Błąd", JOptionPane.ERROR_MESSAGE);
+    }
+
+    // Pomocnicza metoda do włączania/wyłączania panelu
+    private void setPanelEnabled(JPanel panel, boolean enabled) {
+        panel.setEnabled(enabled);
+        for (Component cp : panel.getComponents()) {
+            if (cp instanceof JPanel) {
+                setPanelEnabled((JPanel) cp, enabled);
+            } else {
+                cp.setEnabled(enabled);
+            }
+        }
+    }
+
+    // Przygotowanie pliku bez komentarzy dla silnika C
+    private void prepareCleanedFile() {
+        if (currentInputPath == null || currentInputPath.isEmpty() || currentInputPath.endsWith(".bin")) {
+            cleanedInputPath = currentInputPath;
+            return;
+        }
+        try {
+            java.util.List<String> lines = java.nio.file.Files.readAllLines(java.nio.file.Paths.get(currentInputPath));
+            java.util.List<String> cleanedLines = new java.util.ArrayList<>();
+            for (String line : lines) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty() && !trimmed.startsWith("#")) {
+                    cleanedLines.add(line);
+                }
+            }
+            java.nio.file.Path tempFile = java.nio.file.Files.createTempFile("graph_clean_", ".txt");
+            java.nio.file.Files.write(tempFile, cleanedLines);
+            cleanedInputPath = tempFile.toAbsolutePath().toString();
+            tempFile.toFile().deleteOnExit();
+        } catch (Exception e) {
+            cleanedInputPath = currentInputPath;
+        }
     }
 
     // Punkt startowy aplikacji
