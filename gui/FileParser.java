@@ -1,91 +1,51 @@
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.File;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Locale;
+import java.util.Scanner;
 
 public class FileParser {
   private void readVertices(String path, Graph graph) throws Exception {
+    File file = new File(path);
     graph.clear();
-    int lineNumber = 1;
-    try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-      String line;
-      // Odczyt pierwszej linii z liczbą wierzchołków
-      while ((line = br.readLine()) != null && line.trim().isEmpty()) {
-        lineNumber++;
-      }
-      if (line == null) return;
-      
-      int verticesCount;
-      try {
-        verticesCount = Integer.parseInt(line.trim());
-      } catch (NumberFormatException e) {
-        throw new Exception("Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii " + lineNumber + ".");
-      }
-      lineNumber++;
-      
-      int count = 0;
-      while (count < verticesCount && (line = br.readLine()) != null) {
-        String trimmed = line.trim();
-        if (trimmed.isEmpty()) {
-          lineNumber++;
-          continue;
-        }
-        String[] parts = trimmed.split("\\s+");
-        if (parts.length < 3) {
-          throw new Exception("Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii " + lineNumber + ".");
-        }
-        try {
-          int id = Integer.parseInt(parts[0]);
-          double x = Double.parseDouble(parts[1].replace(',', '.'));
-          double y = Double.parseDouble(parts[2].replace(',', '.'));
-          graph.addVertex(id, x, y);
-          count++;
-        } catch (NumberFormatException e) {
-          throw new Exception("Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii " + lineNumber + ".");
-        }
-        lineNumber++;
+    try (Scanner scanner = new Scanner(file)) {
+      scanner.useLocale(Locale.US);
+      int verticesCount = scanner.nextInt();
+      for (int i = 0; i < verticesCount; i++) {
+        int id = scanner.nextInt();
+        double x = scanner.nextDouble();
+        double y = scanner.nextDouble();
+        graph.addVertex(id, x, y);
       }
       graph.calculateBounds();
     }
   }
 
   private void readEdges(String path, Graph graph) throws Exception {
-    int lineNumber = 1;
-    try (BufferedReader br = new BufferedReader(new FileReader(path))) {
-      String line;
-      while ((line = br.readLine()) != null) {
-        String trimmed = line.trim();
-        if (trimmed.isEmpty()) {
-          lineNumber++;
-          continue;
+    File file = new File(path);
+    try (Scanner scanner = new Scanner(file)) {
+      scanner.useLocale(Locale.US);
+      while (scanner.hasNext()) {
+        String name = scanner.next();
+        if (!scanner.hasNextInt()) break; // Zabezpieczenie na koniec pliku
+        int sourceId = scanner.nextInt();
+        if (!scanner.hasNextInt()) break;
+        int targetId = scanner.nextInt();
+        if (!scanner.hasNextDouble()) break;
+        double weight = scanner.nextDouble();
+        
+        // Jeśli wierzchołki nie istnieją, stwórz je (domyślna pozycja 0,0)
+        if (!graph.getVertices().containsKey(sourceId)) {
+          graph.addVertex(sourceId, 0, 0);
         }
-        String[] parts = trimmed.split("\\s+");
-        // readEdges wczytuje 4 elementy, natomiast by dopasować się do wymaganych 
-        // komunikatów błędu logujemy ten sam precyzyjny tekst zgodny z dokumentacją
-        if (parts.length < 4) {
-          throw new Exception("Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii " + lineNumber + ".");
+        if (!graph.getVertices().containsKey(targetId)) {
+          graph.addVertex(targetId, 0, 0);
         }
-        try {
-          String name = parts[0];
-          int sourceId = Integer.parseInt(parts[1]);
-          int targetId = Integer.parseInt(parts[2]);
-          double weight = Double.parseDouble(parts[3].replace(',', '.'));
-          
-          if (!graph.getVertices().containsKey(sourceId)) {
-            graph.addVertex(sourceId, 0, 0);
-          }
-          if (!graph.getVertices().containsKey(targetId)) {
-            graph.addVertex(targetId, 0, 0);
-          }
-          graph.addEdge(name, sourceId, targetId, weight);
-        } catch (NumberFormatException e) {
-          throw new Exception("Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii " + lineNumber + ".");
-        }
-        lineNumber++;
+        
+        graph.addEdge(name, sourceId, targetId, weight);
       }
     }
   }
@@ -94,6 +54,9 @@ public class FileParser {
     byte[] allBytes = Files.readAllBytes(Paths.get(path));
     graph.clear();
     
+    // Ręczna konwersja Little-Endian (z C na Windows) do Big-Endian (natywne dla Javy)
+    // Zmieniamy kolejność bajtów w odczytanej tablicy:
+    // int (4 bajty)
     reverseBytes(allBytes, 0, 4);
     int verticesCount = ByteBuffer.wrap(allBytes, 0, 4).getInt();
     
@@ -104,14 +67,16 @@ public class FileParser {
           "znaleziono " + allBytes.length + " bajtów.");
     }
     
+    // Dla każdego wierzchołka: id(int, 4 bajty), x(double, 8 bajtów), y(double, 8 bajtów)
     ByteBuffer buffer = ByteBuffer.wrap(allBytes);
-    buffer.position(4); 
+    // Używamy natywnego Big Endian Javy (domyślny), ponieważ ręcznie obrócimy bajty
+    buffer.position(4); // pomijamy ilość wierzchołków
     
     for (int i = 0; i < verticesCount; i++) {
         int offset = 4 + (i * 20);
-        reverseBytes(allBytes, offset, 4);
-        reverseBytes(allBytes, offset + 4, 8);
-        reverseBytes(allBytes, offset + 12, 8);
+        reverseBytes(allBytes, offset, 4);      // id
+        reverseBytes(allBytes, offset + 4, 8);  // x
+        reverseBytes(allBytes, offset + 12, 8); // y
         
         int id = buffer.getInt();
         double x = buffer.getDouble();
@@ -121,6 +86,7 @@ public class FileParser {
     graph.calculateBounds();
   }
 
+  // Pomocnicza metoda do zmiany kolejności bajtów (Little Endian -> Big Endian)
   private void reverseBytes(byte[] array, int offset, int length) {
       for (int i = 0; i < length / 2; i++) {
           byte temp = array[offset + i];
