@@ -285,7 +285,7 @@ public class Main extends JFrame {
                 }
                 setPanelEnabled(toolPanel, true);
                 
-                // POPRAWKA: Ponowne zablokowanie pola iteracji po masowym odblokowaniu, jeśli wybrany jest Tutte
+                // Ponowne zablokowanie pola iteracji po masowym odblokowaniu, jeśli wybrany jest Tutte
                 if ("Tutte".equalsIgnoreCase((String) algoCombo.getSelectedItem())) {
                     iterField.setEnabled(false);
                 }
@@ -359,6 +359,12 @@ public class Main extends JFrame {
                 double nx = Double.parseDouble(xText);
                 double ny = Double.parseDouble(yText);
                 
+                // Walidacja współrzędnych (obszar 5000x5000, margines V_RAD=12)
+                if (nx < 12 || nx > 4988 || ny < 12 || ny > 4988) {
+                    showWarning("Współrzędne muszą znajdować się w obszarze roboczym (12 - 4988).");
+                    return;
+                }
+                
                 if (Double.isNaN(nx) || Double.isInfinite(nx) || Double.isNaN(ny) || Double.isInfinite(ny)) {
                     showWarning("Współrzędne muszą być skończonymi liczbami rzeczywistymi.");
                     return;
@@ -425,6 +431,23 @@ public class Main extends JFrame {
         
         // Automatyczne dopasowanie widoku
         graphPanel.autofit();
+        
+        // Sprawdzenie czy wierzchołki nie są poza obszarem 5000x5000
+        if (graph.getVertexCount() > 0) {
+            graph.calculateBounds();
+            if (graph.getMinX() < 12 || graph.getMaxX() > 4988 || 
+                graph.getMinY() < 12 || graph.getMaxY() > 4988) {
+                
+                int option = JOptionPane.showConfirmDialog(this, 
+                    "Wykryto wierzchołki poza obszarem roboczym. Czy chcesz je automatycznie przeskalować do obszaru 5000x5000?",
+                    "Wierzchołki poza obszarem", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                
+                if (option == JOptionPane.YES_OPTION) {
+                    graphPanel.normalizeToWorkspace();
+                }
+            }
+        }
+        
         updateZoomSlider((int)(graphPanel.getZoom() * 100));
         
         graphPanel.repaint();
