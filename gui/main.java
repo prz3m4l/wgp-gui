@@ -7,17 +7,21 @@ public class Main extends JFrame {
     private FileParser parser = new FileParser();
     private CalculationEngine engine = new CalculationEngine();
     private GraphPanel graphPanel;
+    private JPanel rightContainer;
+    private JButton toggleBtn;
     
     private JLabel statusLabel = new JLabel("Stan: Oczekiwanie | Wierzchołki: 0 | Krawędzie: 0");
     private JTextField xField = new JTextField(5);
     private JTextField yField = new JTextField(5);
     private JLabel idLabel = new JLabel("ID: -");
     private JComboBox<String> algoCombo = new JComboBox<>(new String[]{"Fruchterman-Reingold", "Tutte"});
-    private JTextField iterField = new JTextField("600");
-    private JSlider zoomSlider = new JSlider(10, 200, 100);
+    private JComboBox<String> formatCombo = new JComboBox<>(new String[]{"Tekstowy", "Binarny"});
+    private JTextField iterField = new JTextField("100");
+    private JSlider zoomSlider = new JSlider(5, 200, 50);
     private JPanel toolPanel;
     private String currentInputPath = "";
     private String cleanedInputPath = "";
+    private Timer statusTimer;
 
     public Main() {
         // Konfiguracja okna głównego
@@ -30,12 +34,38 @@ public class Main extends JFrame {
 
         setJMenuBar(createMenuBar());
 
-        // Inicjalizacja układu i paneli
+        // Inicjalizacja układu z przyciskiem chowania paska
         setLayout(new BorderLayout(5, 5));
-        add(graphPanel, BorderLayout.CENTER);
+        
         toolPanel = createToolPanel();
-        add(toolPanel, BorderLayout.EAST);
+        rightContainer = new JPanel(new BorderLayout());
+        
+        toggleBtn = new JButton("◀");
+        toggleBtn.setFocusPainted(false);
+        toggleBtn.setMargin(new Insets(0, 0, 0, 0));
+        toggleBtn.setToolTipText("Schowaj/Pokaż panel");
+        toggleBtn.setPreferredSize(new Dimension(25, 0));
+        toggleBtn.addActionListener(e -> {
+            boolean visible = toolPanel.isVisible();
+            toolPanel.setVisible(!visible);
+            toggleBtn.setText(visible ? "▶" : "◀");
+            revalidate();
+            repaint();
+        });
+
+        rightContainer.add(toggleBtn, BorderLayout.WEST);
+        rightContainer.add(toolPanel, BorderLayout.CENTER);
+        
+        add(graphPanel, BorderLayout.CENTER);
+        add(rightContainer, BorderLayout.EAST);
+        
         setPanelEnabled(toolPanel, false);
+        
+        // Wykonaj autofit po załadowaniu GUI, aby graf był od razu widoczny
+        SwingUtilities.invokeLater(() -> {
+            graphPanel.autofit();
+            zoomSlider.setValue((int)(graphPanel.getZoom() * 100));
+        });
         
         JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statusPanel.setBorder(BorderFactory.createEtchedBorder());
@@ -51,15 +81,35 @@ public class Main extends JFrame {
         JMenuItem loadTxt = new JMenuItem("Wczytaj graf");
         loadTxt.addActionListener(e -> openFile(false));
 
-        JMenuItem saveRes = new JMenuItem("Zapisz wyniki");
-        saveRes.addActionListener(e -> saveAction(true));
+        JMenuItem saveResTxt = new JMenuItem("Zapisz wyniki (Tekstowo)");
+        saveResTxt.addActionListener(e -> saveAction(false));
+
+        JMenuItem saveResBin = new JMenuItem("Zapisz wyniki (Binarnie)");
+        saveResBin.addActionListener(e -> saveAction(true));
 
         fileMenu.add(loadTxt);
         fileMenu.addSeparator();
-        fileMenu.add(saveRes);
+        fileMenu.add(saveResTxt);
+        fileMenu.add(saveResBin);
         
         menuBar.add(fileMenu);
-        menuBar.add(new JMenu("Pomoc"));
+        
+        // --- NOWA ZAKŁADKA POMOCY ---
+        JMenu helpMenu = new JMenu("Pomoc");
+        JMenuItem infoItem = new JMenuItem("Instrukcja i dokumentacja");
+        infoItem.addActionListener(e -> {
+            String helpText = "Wizualizacja Grafu Planarnego\n\n"
+                            + "Skrócona instrukcja:\n"
+                            + "1. Wczytaj graf z pliku krawędzi w formacie wejściowym.\n"
+                            + "2. W menu po prawej wybierz algorytm (np. Fruchterman-Reingold) i uruchom go.\n"
+                            + "3. Nawiguj po obszarze przybliżając ekran lub używając trybu przesuwania (Pan).\n\n"
+                            + "Uwaga: Po więcej informacji i dokładny opis działania poszczególnych "
+                            + "modułów odsyłamy do dokumentacji końcowej projektu.";
+            JOptionPane.showMessageDialog(this, helpText, "Pomoc / O programie", JOptionPane.INFORMATION_MESSAGE);
+        });
+        helpMenu.add(infoItem);
+        menuBar.add(helpMenu);
+        
         return menuBar;
     }
 
@@ -76,6 +126,11 @@ public class Main extends JFrame {
         panel.add(title1);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
 
+        JLabel algoLabel = new JLabel("Algorytm:");
+        algoLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(algoLabel);
+        panel.add(Box.createRigidArea(new Dimension(0, 5)));
+
         algoCombo.setMaximumSize(new Dimension(180, 25));
         algoCombo.setAlignmentX(Component.CENTER_ALIGNMENT);
         algoCombo.addActionListener(e -> {
@@ -85,7 +140,7 @@ public class Main extends JFrame {
             if (isTutte) {
                 iterField.setText("-");
             } else if ("-".equals(iterField.getText())) {
-                iterField.setText("600");
+                iterField.setText("100");
             }
         });
         panel.add(algoCombo);
@@ -98,6 +153,15 @@ public class Main extends JFrame {
         iterField.setMaximumSize(new Dimension(180, 25));
         iterField.setAlignmentX(Component.CENTER_ALIGNMENT);
         panel.add(iterField);
+        panel.add(Box.createRigidArea(new Dimension(0, 10)));
+        
+        JLabel formatLabel = new JLabel("Format danych (C):");
+        formatLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(formatLabel);
+        
+        formatCombo.setMaximumSize(new Dimension(180, 25));
+        formatCombo.setAlignmentX(Component.CENTER_ALIGNMENT);
+        panel.add(formatCombo);
         panel.add(Box.createRigidArea(new Dimension(0, 10)));
         
         // Wywołanie zewnętrznego silnika obliczeniowego
@@ -125,6 +189,7 @@ public class Main extends JFrame {
             graphPanel.setZoom(zoomSlider.getValue() / 100.0);
         });
         panel.add(zoomSlider);
+        graphPanel.setZoom(0.5); // Ustawienie początkowego zooma na 50%
         panel.add(Box.createRigidArea(new Dimension(0, 5)));
 
         JButton autofitBtn = new JButton("Autofit");
@@ -193,6 +258,11 @@ public class Main extends JFrame {
         JCheckBox weights = new JCheckBox("Wagi", false);
         weights.addActionListener(e -> graphPanel.setShowWeights(weights.isSelected()));
         checkPanel.add(weights);
+
+        JCheckBox pan = new JCheckBox("Przesuwanie (Pan)", false);
+        pan.addActionListener(e -> graphPanel.setPanMode(pan.isSelected()));
+        checkPanel.add(pan);
+
         panel.add(checkPanel);
 
         return panel;
@@ -208,15 +278,31 @@ public class Main extends JFrame {
                 if (binary) {
                     parser.loadFullGraph(currentInputPath, currentInputPath, graph, true);
                 } else {
-                    java.lang.reflect.Method m = parser.getClass().getDeclaredMethod("readEdges", String.class, Graph.class);
+                    prepareCleanedFile();
+                    java.lang.reflect.Method m = FileParser.class.getDeclaredMethod("readEdges", String.class, Graph.class);
                     m.setAccessible(true);
-                    m.invoke(parser, currentInputPath, graph);
+                    m.invoke(parser, cleanedInputPath, graph);
                 }
                 setPanelEnabled(toolPanel, true);
+                
+                // POPRAWKA: Ponowne zablokowanie pola iteracji po masowym odblokowaniu, jeśli wybrany jest Tutte
+                if ("Tutte".equalsIgnoreCase((String) algoCombo.getSelectedItem())) {
+                    iterField.setEnabled(false);
+                }
+                
                 updateUIState("Wczytano plik");
-                prepareCleanedFile();
             } catch (Exception ex) {
-                showError("Błąd wczytywania: " + ex.getCause().getMessage());
+                Throwable target = ex;
+                if (ex instanceof java.lang.reflect.InvocationTargetException) {
+                    target = ((java.lang.reflect.InvocationTargetException) ex).getTargetException();
+                }
+                String msg = target.getMessage() != null ? target.getMessage() : target.toString();
+                
+                if (msg.startsWith("Błąd wczytywania pliku!")) {
+                    showError(msg);
+                } else {
+                    showError("Błąd wczytywania: " + msg);
+                }
             }
         }
     }
@@ -224,7 +310,11 @@ public class Main extends JFrame {
     // Wywołanie zewnętrznego silnika obliczeniowego
     private void runAlgorithm() {
         if (currentInputPath.isEmpty()) {
-            showError("Najpierw wczytaj plik z listą krawędzi!");
+            showWarning("Najpierw wczytaj plik z listą krawędzi!");
+            return;
+        }
+        if (graph.getVertexCount() == 0) {
+            showWarning("Graf jest pusty. Wczytaj poprawne dane przed uruchomieniem algorytmu.");
             return;
         }
         try {
@@ -240,20 +330,21 @@ public class Main extends JFrame {
                     iterations = Integer.parseInt(iterField.getText().trim());
                     if (iterations <= 0) throw new NumberFormatException();
                 } catch (NumberFormatException e) {
-                    showError("Iteracje muszą być liczbą całkowitą dodatnią!");
+                    showWarning("Liczba iteracji musi być całkowitą liczbą dodatnią!");
                     return;
                 }
             }
+            boolean isBinary = "Binarny".equals(formatCombo.getSelectedItem());
             String pathToUse = (cleanedInputPath != null && !cleanedInputPath.isEmpty()) ? cleanedInputPath : currentInputPath;
-            engine.runGraphAlgorithm(pathToUse, algoParam, iterations, false, graph);
+            engine.runGraphAlgorithm(pathToUse, algoParam, iterations, isBinary, graph);
             
-            // Wymuś przeładowanie pozycji z pliku wynikowego
-            parser.loadFullGraph("wynik.txt", pathToUse, graph, false);
+            // engine.runGraphAlgorithm już wywołuje parser.loadFullGraph("wynik.txt", ...) 
+            // jeśli exitCode == 0, więc nie dublujemy tego tutaj.
             
             graphPanel.autofit();
             updateUIState("Obliczono układ (" + selectedAlgo + ")");
         } catch (Exception ex) {
-            showError(ex.getMessage());
+            showError("Błąd silnika: " + ex.getMessage());
         }
     }
 
@@ -262,27 +353,55 @@ public class Main extends JFrame {
         if (graphPanel.getSelectedVertex() != null) {
             try {
                 // Zamieniamy przecinek na kropkę przed parsowaniem
-                String xText = xField.getText().replace(',', '.');
-                String yText = yField.getText().replace(',', '.');
+                String xText = xField.getText().replace(',', '.').trim();
+                String yText = yField.getText().replace(',', '.').trim();
                 
                 double nx = Double.parseDouble(xText);
                 double ny = Double.parseDouble(yText);
                 
+                if (Double.isNaN(nx) || Double.isInfinite(nx) || Double.isNaN(ny) || Double.isInfinite(ny)) {
+                    showWarning("Współrzędne muszą być skończonymi liczbami rzeczywistymi.");
+                    return;
+                }
+
+                // Ograniczanie współrzędnych do obszaru roboczego (margines 12px na promień wierzchołka)
+                boolean clamped = false;
+                double minX = 12.0, maxX = 5000.0 - 12.0;
+                double minY = 12.0, maxY = 5000.0 - 12.0;
+
+                if (nx < minX) { nx = minX; clamped = true; }
+                else if (nx > maxX) { nx = maxX; clamped = true; }
+
+                if (ny < minY) { ny = minY; clamped = true; }
+                else if (ny > maxY) { ny = maxY; clamped = true; }
+
                 graphPanel.getSelectedVertex().setX(nx);
                 graphPanel.getSelectedVertex().setY(ny);
+                
+                // Jeśli wartości były poza zakresem, zaktualizuj pola tekstowe i wyświetl komunikat
+                if (clamped) {
+                    xField.setText(String.format(java.util.Locale.US, "%.2f", nx));
+                    yField.setText(String.format(java.util.Locale.US, "%.2f", ny));
+                    notifyVertexOutOfBounds();
+                }
+                
                 graphPanel.repaint();
             } catch (NumberFormatException ex) {
-                showError("Niepoprawna wartość. Współrzędna musi być prawidłową liczbą.");
+                showWarning("Wprowadzona wartość nie jest poprawną liczbą. Użyj formatu np. 123.45");
             }
         }
     }
 
     // Zapisywanie stanu grafu
-    private void saveAction(boolean resultsOnly) {
+    private void saveAction(boolean binary) {
         JFileChooser fc = new JFileChooser(new java.io.File(System.getProperty("user.dir")));
         if (fc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             try {
-                parser.saveToText(fc.getSelectedFile().getAbsolutePath(), graph);
+                if (binary) {
+                    parser.saveToBinary(fc.getSelectedFile().getAbsolutePath(), graph);
+                } else {
+                    parser.saveToText(fc.getSelectedFile().getAbsolutePath(), graph);
+                }
                 statusLabel.setText("Zapisano pomyślnie.");
             } catch (Exception ex) {
                 showError("Błąd zapisu: " + ex.getMessage());
@@ -303,12 +422,40 @@ public class Main extends JFrame {
     private void updateUIState(String msg) {
         statusLabel.setText(String.format("Stan: %s | Wierzchołki: %d | Krawędzie: %d", 
                 msg, graph.getVertexCount(), graph.getEdgesCount()));
+        
+        // Automatyczne dopasowanie widoku
+        graphPanel.autofit();
+        updateZoomSlider((int)(graphPanel.getZoom() * 100));
+        
         graphPanel.repaint();
     }
 
     // Wyświetlanie dialogu z błędem
     private void showError(String msg) {
         JOptionPane.showMessageDialog(this, msg, "Błąd", JOptionPane.ERROR_MESSAGE);
+    }
+
+    // Wyświetlanie dialogu z ostrzeżeniem
+    private void showWarning(String msg) {
+        JOptionPane.showMessageDialog(this, msg, "Ostrzeżenie", JOptionPane.WARNING_MESSAGE);
+    }
+
+    // Powiadomienie o wyjściu poza obszar
+    public void notifyVertexOutOfBounds() {
+        statusLabel.setText("<html><font color='red'>Uwaga: Próba przesunięcia wierzchołka poza obszar roboczy!</font></html>");
+        if (statusTimer != null && statusTimer.isRunning()) {
+            statusTimer.restart();
+        } else {
+            statusTimer = new Timer(3000, e -> {
+                statusLabel.setText("Stan: Gotowy | Wierzchołki: " + graph.getVertexCount() + " | Krawędzie: " + graph.getEdgesCount());
+            });
+            statusTimer.setRepeats(false);
+            statusTimer.start();
+        }
+    }
+
+    public void updateZoomSlider(int value) {
+        zoomSlider.setValue(value);
     }
 
     // Pomocnicza metoda do włączania/wyłączania panelu

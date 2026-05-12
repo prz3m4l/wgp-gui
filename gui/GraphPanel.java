@@ -10,17 +10,52 @@ public class GraphPanel extends JPanel {
     private boolean showWeights = false;
     private static final int V_RAD = 12;
     private double zoom = 1.0;
+    
+    // Zwiększony wirtualny obszar roboczy
+    private static final int WORK_WIDTH = 5000;
+    private static final int WORK_HEIGHT = 5000;
+    
+    private double offsetX = 0;
+    private double offsetY = 0;
+    private boolean panMode = false;
+    private Point lastMousePos;
+    
+    private final Main parent;
+
+    // Ograniczanie przesunięcia kamery (Pan) tak, by ekran nie wyszedł poza obszar roboczy
+    private void clampOffsets() {
+        if (getWidth() == 0 || getHeight() == 0) return;
+        
+        double limitX = (WORK_WIDTH / 2.0 * zoom) - (getWidth() / 2.0);
+        if (limitX < 0) offsetX = 0; // Jeśli obszar jest mniejszy niż ekran, centrujemy
+        else offsetX = Math.max(-limitX, Math.min(offsetX, limitX));
+
+        double limitY = (WORK_HEIGHT / 2.0 * zoom) - (getHeight() / 2.0);
+        if (limitY < 0) offsetY = 0;
+        else offsetY = Math.max(-limitY, Math.min(offsetY, limitY));
+    }
+
+    @SuppressWarnings("unused")
+    private void keepParent() { if (parent != null) parent.toString(); }
 
     public GraphPanel(Graph graph, Main parent) {
         // Konfiguracja panelu i obsługa myszy
         this.graph = graph;
+        this.parent = parent;
         setBackground(Color.WHITE);
 
         MouseAdapter ma = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                double tx = (getWidth() / 2.0) * (1.0 - zoom);
-                double ty = (getHeight() / 2.0) * (1.0 - zoom);
+                if (panMode && SwingUtilities.isLeftMouseButton(e)) {
+                    lastMousePos = e.getPoint();
+                    return;
+                }
+                
+                clampOffsets();
+                double tx = (getWidth() / 2.0) - (WORK_WIDTH / 2.0 * zoom) + offsetX;
+                double ty = (getHeight() / 2.0) - (WORK_HEIGHT / 2.0 * zoom) + offsetY;
+
                 int mouseX = (int) ((e.getX() - tx) / zoom);
                 int mouseY = (int) ((e.getY() - ty) / zoom);
                 
@@ -28,15 +63,56 @@ public class GraphPanel extends JPanel {
                 parent.updateSelectedInfo(selectedVertex);
                 repaint();
             }
+
             @Override
             public void mouseDragged(MouseEvent e) {
+                if (panMode && SwingUtilities.isLeftMouseButton(e) && lastMousePos != null) {
+                    offsetX += e.getX() - lastMousePos.x;
+                    offsetY += e.getY() - lastMousePos.y;
+                    lastMousePos = e.getPoint();
+                    clampOffsets();
+                    repaint();
+                    return;
+                }
+
                 if (selectedVertex != null) {
-                    double tx = (getWidth() / 2.0) * (1.0 - zoom);
-                    double ty = (getHeight() / 2.0) * (1.0 - zoom);
-                    selectedVertex.setX((e.getX() - tx) / zoom);
-                    selectedVertex.setY((e.getY() - ty) / zoom);
+                    clampOffsets();
+                    double tx = (getWidth() / 2.0) - (WORK_WIDTH / 2.0 * zoom) + offsetX;
+                    double ty = (getHeight() / 2.0) - (WORK_HEIGHT / 2.0 * zoom) + offsetY;
+
+                    double rawX = (e.getX() - tx) / zoom;
+                    double rawY = (e.getY() - ty) / zoom;
+
+                    // Granice fizycznego panelu w przestrzeni wirtualnej
+                    double viewMinX = (0 - tx) / zoom;
+                    double viewMaxX = (getWidth() - tx) / zoom;
+                    double viewMinY = (0 - ty) / zoom;
+                    double viewMaxY = (getHeight() - ty) / zoom;
+
+                    // Finalne granice: nie wychodzimy poza wirtualny obszar ANI poza widoczny ekran
+                    double minX = Math.max(V_RAD, viewMinX + V_RAD);
+                    double maxX = Math.min(WORK_WIDTH - V_RAD, viewMaxX - V_RAD);
+                    double minY = Math.max(V_RAD, viewMinY + V_RAD);
+                    double maxY = Math.min(WORK_HEIGHT - V_RAD, viewMaxY - V_RAD);
+
+                    boolean clamped = false;
+                    double clampedX = rawX;
+                    double clampedY = rawY;
+
+                    if (rawX < minX) { clampedX = minX; clamped = true; }
+                    else if (rawX > maxX) { clampedX = maxX; clamped = true; }
+
+                    if (rawY < minY) { clampedY = minY; clamped = true; }
+                    else if (rawY > maxY) { clampedY = maxY; clamped = true; }
+
+                    selectedVertex.setX(clampedX);
+                    selectedVertex.setY(clampedY);
                     parent.updateSelectedInfo(selectedVertex);
                     repaint();
+
+                    if (clamped) {
+                        parent.notifyVertexOutOfBounds();
+                    }
                 }
             }
         };
@@ -52,27 +128,47 @@ public class GraphPanel extends JPanel {
         return null;
     }
 
-    // Skalowanie grafu do rozmiaru okna
+    // Skalowanie grafu do rozmiaru widocznego obszaru
     public void autofit() {
         if (graph.getVertexCount() == 0) return;
+        offsetX = 0;
+        offsetY = 0;
         graph.calculateBounds();
         double minX = graph.getMinX(), maxX = graph.getMaxX();
         double minY = graph.getMinY(), maxY = graph.getMaxY();
         
         double gWidth = maxX - minX;
         double gHeight = maxY - minY;
-        if (gWidth == 0) gWidth = 100; if (gHeight == 0) gHeight = 100;
+        if (gWidth == 0) gWidth = 100;
+        if (gHeight == 0) gHeight = 100;
 
-        double scale = Math.min((getWidth() - 150) / gWidth, (getHeight() - 150) / gHeight);
-        if (scale > 2.0) scale = 2.0;
+        // Skalujemy tak, aby graf zajmował ok 80% mniejszego z wymiarów widocznego okna
+        double targetW = getWidth() - 100;
+        double targetH = getHeight() - 100;
+        if (targetW <= 0) targetW = 600;
+        if (targetH <= 0) targetH = 400;
 
-        double offsetX = (getWidth() - gWidth * scale) / 2.0;
-        double offsetY = (getHeight() - gHeight * scale) / 2.0;
+        double scale = Math.min(targetW / gWidth, targetH / gHeight);
+        if (scale > 5.0) scale = 5.0; // Nie powiększaj małych grafów zbyt mocno
+        scale = Math.max(scale, getMinZoom()); // Zabezpieczenie przed zbytnim oddaleniem
+
+        this.zoom = scale; // Synchronizacja zooma
+        if (parent != null) {
+            parent.updateZoomSlider((int)(scale * 100));
+        }
+
+        // Środek wirtualnego obszaru roboczego
+        double centerX = WORK_WIDTH / 2.0;
+        double centerY = WORK_HEIGHT / 2.0;
+
+        double offsetX = centerX - (gWidth * scale) / 2.0;
+        double offsetY = centerY - (gHeight * scale) / 2.0;
         
         for (Vertex v : graph.getVertices().values()) {
             v.setX(offsetX + (v.getX() - minX) * scale);
             v.setY(offsetY + (v.getY() - minY) * scale);
         }
+        repaint();
     }
 
     // Renderowanie grafu
@@ -82,11 +178,21 @@ public class GraphPanel extends JPanel {
         Graphics2D g2 = (Graphics2D) g;
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // Zoom od środka ekranu
-        double tx = (getWidth() / 2.0) * (1.0 - zoom);
-        double ty = (getHeight() / 2.0) * (1.0 - zoom);
+        // Upewniamy się, że przy zmianie rozmiaru okna lub zooma, kamera nie wyleci za ekran
+        clampOffsets();
+
+        // Centrowanie wirtualnego obszaru roboczego z uwzględnieniem przesunięcia (pan)
+        double tx = (getWidth() / 2.0) - (WORK_WIDTH / 2.0 * zoom) + offsetX;
+        double ty = (getHeight() / 2.0) - (WORK_HEIGHT / 2.0 * zoom) + offsetY;
+        
         g2.translate(tx, ty);
         g2.scale(zoom, zoom);
+
+        // Opcjonalne: rysowanie ramki obszaru roboczego (pomaga w debugowaniu)
+        g2.setColor(new Color(245, 245, 245));
+        g2.fillRect(0, 0, WORK_WIDTH, WORK_HEIGHT);
+        g2.setColor(Color.LIGHT_GRAY);
+        g2.drawRect(0, 0, WORK_WIDTH, WORK_HEIGHT);
 
         // Rysowanie krawędzi
         g2.setColor(Color.DARK_GRAY);
@@ -129,6 +235,20 @@ public class GraphPanel extends JPanel {
     // Zarządzanie opcjami widoku
     public void setShowLabels(boolean s) { this.showLabels = s; repaint(); }
     public void setShowWeights(boolean s) { this.showWeights = s; repaint(); }
-    public void setZoom(double z) { this.zoom = z; repaint(); }
+    public void setPanMode(boolean p) { this.panMode = p; }
+    public double getZoom() { return zoom; }
+    
+    private double getMinZoom() {
+        if (getWidth() == 0 || getHeight() == 0) return 0.05;
+        double minZoomX = (double) getWidth() / WORK_WIDTH;
+        double minZoomY = (double) getHeight() / WORK_HEIGHT;
+        return Math.max(minZoomX, minZoomY);
+    }
+    
+    public void setZoom(double z) { 
+        this.zoom = Math.max(z, getMinZoom()); 
+        clampOffsets();
+        repaint(); 
+    }
     public Vertex getSelectedVertex() { return selectedVertex; }
 }
