@@ -52,7 +52,7 @@ public class CalculationEngine {
       case 4:
         return "Nie można utworzyć pliku wynikowego przez program C. Sprawdź uprawnienia katalogu docelowego.";
       case 5:
-        return "Błąd parametrów (kod 5): Silnik nie rozpoznał nazwy algorytmu. Upewnij się, że przelewasz 'fr' lub 'tutte'.";
+        return "Błąd parametrów (kod 5): Silnik nie rozpoznał nazwy algorytmu. Upewnij się, że przesyłasz'fr' lub 'tutte'.";
       case 7:
         return "Silnik obliczeniowy zgłosił błąd alokacji pamięci (kod 7). Graf może być zbyt duży. Spróbuj zmniejszyć liczbę wierzchołków.";
       case 8:

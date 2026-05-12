@@ -5,8 +5,11 @@ public class AppMenuBar extends JMenuBar {
         // Menu operacji na plikach
         JMenu fileMenu = new JMenu("Plik");
 
-        JMenuItem loadTxt = new JMenuItem("Wczytaj graf");
+        JMenuItem loadTxt = new JMenuItem("Wczytaj graf (Tekstowo)");
         loadTxt.addActionListener(e -> parent.openFile(false));
+
+        JMenuItem loadBin = new JMenuItem("Wczytaj graf (Binarnie)");
+        loadBin.addActionListener(e -> parent.openFile(true));
 
         JMenuItem saveResTxt = new JMenuItem("Zapisz wyniki (Tekstowo)");
         saveResTxt.addActionListener(e -> parent.saveAction(false));
@@ -15,6 +18,7 @@ public class AppMenuBar extends JMenuBar {
         saveResBin.addActionListener(e -> parent.saveAction(true));
 
         fileMenu.add(loadTxt);
+        fileMenu.add(loadBin);
         fileMenu.addSeparator();
         fileMenu.add(saveResTxt);
         fileMenu.add(saveResBin);
