@@ -22,7 +22,7 @@ public class GraphPanel extends JPanel {
     
     private final Main parent;
 
-    // Ograniczanie przesunięcia kamery (Pan) tak, by ekran nie wyszedł poza obszar roboczy
+    // Ograniczanie przesunięcia kamery tak, by ekran nie wyszedł poza obszar roboczy
     private void clampOffsets() {
         if (getWidth() == 0 || getHeight() == 0) return;
         
@@ -89,7 +89,7 @@ public class GraphPanel extends JPanel {
                     double viewMinY = (0 - ty) / zoom;
                     double viewMaxY = (getHeight() - ty) / zoom;
 
-                    // Finalne granice: nie wychodzimy poza wirtualny obszar ANI poza widoczny ekran
+                    // Finalne granice: nie wychodzimy poza wirtualny obszar ani poza widoczny ekran
                     double minX = Math.max(V_RAD, viewMinX + V_RAD);
                     double maxX = Math.min(WORK_WIDTH - V_RAD, viewMaxX - V_RAD);
                     double minY = Math.max(V_RAD, viewMinY + V_RAD);
@@ -250,5 +250,47 @@ public class GraphPanel extends JPanel {
         clampOffsets();
         repaint(); 
     }
+
+    /**
+     * Skaluje współrzędne wszystkich wierzchołków tak, aby zmieściły się w obszarze roboczym 5000x5000
+     * z zachowaniem proporcji i marginesem bezpieczeństwa.
+     */
+    public void normalizeToWorkspace() {
+        if (graph.getVertexCount() == 0) return;
+        
+        graph.calculateBounds();
+        double minX = graph.getMinX(), maxX = graph.getMaxX();
+        double minY = graph.getMinY(), maxY = graph.getMaxY();
+        
+        double gWidth = maxX - minX;
+        double gHeight = maxY - minY;
+        if (gWidth == 0) gWidth = 1;
+        if (gHeight == 0) gHeight = 1;
+
+        double margin = V_RAD + 5;
+        double availableSize = 5000.0 - 2 * margin;
+
+        double scale = Math.min(availableSize / gWidth, availableSize / gHeight);
+        
+        // Przesunięcie do środka obszaru 5000x5000
+        double targetCenterX = 2500.0;
+        double targetCenterY = 2500.0;
+        double currentCenterX = (minX + maxX) / 2.0;
+        double currentCenterY = (minY + maxY) / 2.0;
+
+        for (Vertex v : graph.getVertices().values()) {
+            double newX = targetCenterX + (v.getX() - currentCenterX) * scale;
+            double newY = targetCenterY + (v.getY() - currentCenterY) * scale;
+            v.setX(newX);
+            v.setY(newY);
+        }
+        
+        graph.calculateBounds();
+        repaint();
+        if (parent != null) {
+            parent.updateSelectedInfo(selectedVertex);
+        }
+    }
+
     public Vertex getSelectedVertex() { return selectedVertex; }
 }
