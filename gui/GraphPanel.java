@@ -181,14 +181,14 @@ public class GraphPanel extends JPanel {
         // Upewniamy się, że przy zmianie rozmiaru okna lub zooma, kamera nie wyleci za ekran
         clampOffsets();
 
-        // Centrowanie wirtualnego obszaru roboczego z uwzględnieniem przesunięcia (pan)
+        // Centrowanie wirtualnego obszaru roboczego z uwzględnieniem przesunięcia
         double tx = (getWidth() / 2.0) - (WORK_WIDTH / 2.0 * zoom) + offsetX;
         double ty = (getHeight() / 2.0) - (WORK_HEIGHT / 2.0 * zoom) + offsetY;
         
         g2.translate(tx, ty);
         g2.scale(zoom, zoom);
 
-        // Opcjonalne: rysowanie ramki obszaru roboczego (pomaga w debugowaniu)
+        // Opcjonalne: rysowanie ramki obszaru roboczego
         g2.setColor(new Color(245, 245, 245));
         g2.fillRect(0, 0, WORK_WIDTH, WORK_HEIGHT);
         g2.setColor(Color.LIGHT_GRAY);
@@ -251,7 +251,7 @@ public class GraphPanel extends JPanel {
         repaint(); 
     }
 
-    /**
+    /*
      * Skaluje współrzędne wszystkich wierzchołków tak, aby zmieściły się w obszarze roboczym 5000x5000
      * z zachowaniem proporcji i marginesem bezpieczeństwa.
      */

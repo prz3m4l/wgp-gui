@@ -54,7 +54,7 @@ public class FileParser {
     byte[] allBytes = Files.readAllBytes(Paths.get(path));
     graph.clear();
     
-    // Ręczna konwersja Little-Endian (z C na Windows) do Big-Endian (natywne dla Javy)
+    // Ręczna konwersja Little-Endian do Big-Endian
     // Zmieniamy kolejność bajtów w odczytanej tablicy:
     // int (4 bajty)
     reverseBytes(allBytes, 0, 4);

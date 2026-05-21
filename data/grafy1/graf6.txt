@@ -1,0 +1,6 @@
+# Diament (K4 bez jednej krawędzi)
+e1 1 2 1.0
+e2 1 3 1.0
+e3 2 3 1.0
+e4 2 4 1.0
+e5 3 4 1.0

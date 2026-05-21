@@ -1,0 +1,9 @@
+# W4 (Kwadrat (1,2,3,4) ze środkowym punktem (5) - Wheel graph / piramidka)
+e1 1 2 1.0
+e2 2 3 1.0
+e3 3 4 1.0
+e4 4 1 1.0
+e5 5 1 1.0
+e6 5 2 1.0
+e7 5 3 1.0
+e8 5 4 1.0

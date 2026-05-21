@@ -272,7 +272,7 @@ public class Main extends JFrame {
         JOptionPane.showMessageDialog(this, msg, "Ostrzeżenie", JOptionPane.WARNING_MESSAGE);
     }
 
-    // Usunięcie linii zaczynających się od '#' (np. komentarzy dla .txt)
+    // Usunięcie linii zaczynających się od '#'
     private void prepareCleanedFile() {
         if (currentInputPath == null || currentInputPath.isEmpty() || currentInputPath.endsWith(".bin")) {
             cleanedInputPath = currentInputPath;

@@ -1,0 +1,7 @@
+# Drzewo binarne o wysokości 2 (7 wierzchołków)
+e1 1 2 1.0
+e2 1 3 1.0
+e3 2 4 1.0
+e4 2 5 1.0
+e5 3 6 1.0
+e6 3 7 1.0
