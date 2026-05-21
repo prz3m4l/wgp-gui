@@ -22,7 +22,7 @@ public class GraphPanel extends JPanel {
     
     private final Main parent;
 
-    // Ograniczanie przesunięcia kamery tak, by ekran nie wyszedł poza obszar roboczy
+    // Ograniczanie przesunięcia kamery (Pan) tak, by ekran nie wyszedł poza obszar roboczy
     private void clampOffsets() {
         if (getWidth() == 0 || getHeight() == 0) return;
         
@@ -89,7 +89,7 @@ public class GraphPanel extends JPanel {
                     double viewMinY = (0 - ty) / zoom;
                     double viewMaxY = (getHeight() - ty) / zoom;
 
-                    // Finalne granice: nie wychodzimy poza wirtualny obszar ani poza widoczny ekran
+                    // Finalne granice: nie wychodzimy poza wirtualny obszar ANI poza widoczny ekran
                     double minX = Math.max(V_RAD, viewMinX + V_RAD);
                     double maxX = Math.min(WORK_WIDTH - V_RAD, viewMaxX - V_RAD);
                     double minY = Math.max(V_RAD, viewMinY + V_RAD);

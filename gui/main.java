@@ -7,12 +7,12 @@ public class Main extends JFrame {
     private FileParser parser = new FileParser();
     private CalculationEngine engine = new CalculationEngine();
     private GraphPanel graphPanel;
-    
+
     private AppToolPanel toolPanel;
     private AppStatusPanel statusPanel;
     private JPanel rightContainer;
     private JButton toggleBtn;
-    
+
     private String currentInputPath = "";
     private String cleanedInputPath = "";
 
@@ -28,10 +28,10 @@ public class Main extends JFrame {
         setJMenuBar(new AppMenuBar(this));
 
         setLayout(new BorderLayout(5, 5));
-        
+
         toolPanel = new AppToolPanel(this, graphPanel);
         statusPanel = new AppStatusPanel();
-        
+
         rightContainer = new JPanel(new BorderLayout());
         toggleBtn = new JButton("◀");
         toggleBtn.setFocusPainted(false);
@@ -48,17 +48,17 @@ public class Main extends JFrame {
 
         rightContainer.add(toggleBtn, BorderLayout.WEST);
         rightContainer.add(toolPanel, BorderLayout.CENTER);
-        
+
         add(graphPanel, BorderLayout.CENTER);
         add(rightContainer, BorderLayout.EAST);
         add(statusPanel, BorderLayout.SOUTH);
-        
+
         setPanelEnabled(toolPanel, false);
-        
+
         // Zmuszenie do dopasowania skalowania po wyrenderowaniu UI
         SwingUtilities.invokeLater(() -> {
             graphPanel.autofit();
-            toolPanel.updateZoomSlider((int)(graphPanel.getZoom() * 100));
+            toolPanel.updateZoomSlider((int) (graphPanel.getZoom() * 100));
         });
     }
 
@@ -73,16 +73,17 @@ public class Main extends JFrame {
                     parser.loadFullGraph(currentInputPath, currentInputPath, graph, true);
                 } else {
                     prepareCleanedFile();
-                    java.lang.reflect.Method m = FileParser.class.getDeclaredMethod("readEdges", String.class, Graph.class);
+                    java.lang.reflect.Method m = FileParser.class.getDeclaredMethod("readEdges", String.class,
+                            Graph.class);
                     m.setAccessible(true);
                     m.invoke(parser, cleanedInputPath, graph);
                 }
                 setPanelEnabled(toolPanel, true);
-                
+
                 if ("Tutte".equalsIgnoreCase(toolPanel.getSelectedAlgorithm())) {
                     toolPanel.setIterationsEnabled(false);
                 }
-                
+
                 updateUIState("Wczytano plik");
             } catch (Exception ex) {
                 Throwable target = ex;
@@ -112,22 +113,24 @@ public class Main extends JFrame {
         try {
             String selectedAlgo = toolPanel.getSelectedAlgorithm();
             String algoParam = "tutte".equalsIgnoreCase(selectedAlgo) ? "tutte" : "fr";
-            
+
             int iterations = 0;
             if (!"tutte".equals(algoParam)) {
                 try {
                     iterations = Integer.parseInt(toolPanel.getIterations().trim());
-                    if (iterations <= 0) throw new NumberFormatException();
+                    if (iterations <= 0)
+                        throw new NumberFormatException();
                 } catch (NumberFormatException e) {
                     showWarning("Liczba iteracji musi być całkowitą liczbą dodatnią!");
                     return;
                 }
             }
-            
+
             boolean isBinary = toolPanel.isBinaryFormat();
-            String pathToUse = (cleanedInputPath != null && !cleanedInputPath.isEmpty()) ? cleanedInputPath : currentInputPath;
+            String pathToUse = (cleanedInputPath != null && !cleanedInputPath.isEmpty()) ? cleanedInputPath
+                    : currentInputPath;
             engine.runGraphAlgorithm(pathToUse, algoParam, iterations, isBinary, graph);
-            
+
             graphPanel.autofit();
             updateUIState("Obliczono układ (" + selectedAlgo + ")");
         } catch (Exception ex) {
@@ -141,15 +144,15 @@ public class Main extends JFrame {
             try {
                 String xText = toolPanel.getXText().replace(',', '.').trim();
                 String yText = toolPanel.getYText().replace(',', '.').trim();
-                
+
                 double nx = Double.parseDouble(xText);
                 double ny = Double.parseDouble(yText);
-                
+
                 if (nx < 12 || nx > 4988 || ny < 12 || ny > 4988) {
                     showWarning("Współrzędne muszą znajdować się w obszarze roboczym (12 - 4988).");
                     return;
                 }
-                
+
                 if (Double.isNaN(nx) || Double.isInfinite(nx) || Double.isNaN(ny) || Double.isInfinite(ny)) {
                     showWarning("Współrzędne muszą być skończonymi liczbami rzeczywistymi.");
                     return;
@@ -159,21 +162,31 @@ public class Main extends JFrame {
                 double minX = 12.0, maxX = 5000.0 - 12.0;
                 double minY = 12.0, maxY = 5000.0 - 12.0;
 
-                if (nx < minX) { nx = minX; clamped = true; }
-                else if (nx > maxX) { nx = maxX; clamped = true; }
+                if (nx < minX) {
+                    nx = minX;
+                    clamped = true;
+                } else if (nx > maxX) {
+                    nx = maxX;
+                    clamped = true;
+                }
 
-                if (ny < minY) { ny = minY; clamped = true; }
-                else if (ny > maxY) { ny = maxY; clamped = true; }
+                if (ny < minY) {
+                    ny = minY;
+                    clamped = true;
+                } else if (ny > maxY) {
+                    ny = maxY;
+                    clamped = true;
+                }
 
                 graphPanel.getSelectedVertex().setX(nx);
                 graphPanel.getSelectedVertex().setY(ny);
-                
+
                 if (clamped) {
                     toolPanel.setXText(String.format(java.util.Locale.US, "%.2f", nx));
                     toolPanel.setYText(String.format(java.util.Locale.US, "%.2f", ny));
                     notifyVertexOutOfBounds();
                 }
-                
+
                 graphPanel.repaint();
             } catch (NumberFormatException ex) {
                 showWarning("Wprowadzona wartość nie jest poprawną liczbą. Użyj formatu np. 123.45");
@@ -206,31 +219,32 @@ public class Main extends JFrame {
     // Wspólna aktualizacja stanu całego UI
     private void updateUIState(String msg) {
         statusPanel.updateState(msg, graph.getVertexCount(), graph.getEdgesCount());
-        
+
         graphPanel.autofit();
-        
+
         if (graph.getVertexCount() > 0) {
             graph.calculateBounds();
-            if (graph.getMinX() < 12 || graph.getMaxX() > 4988 || 
-                graph.getMinY() < 12 || graph.getMaxY() > 4988) {
-                
-                int option = JOptionPane.showConfirmDialog(this, 
-                    "Wykryto wierzchołki poza obszarem roboczym. Czy chcesz je automatycznie przeskalować do obszaru 5000x5000?",
-                    "Wierzchołki poza obszarem", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                
+            if (graph.getMinX() < 12 || graph.getMaxX() > 4988 ||
+                    graph.getMinY() < 12 || graph.getMaxY() > 4988) {
+
+                int option = JOptionPane.showConfirmDialog(this,
+                        "Wykryto wierzchołki poza obszarem roboczym. Czy chcesz je automatycznie przeskalować do obszaru 5000x5000?",
+                        "Wierzchołki poza obszarem", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
                 if (option == JOptionPane.YES_OPTION) {
                     graphPanel.normalizeToWorkspace();
                 }
             }
         }
-        
-        updateZoomSlider((int)(graphPanel.getZoom() * 100));
+
+        updateZoomSlider((int) (graphPanel.getZoom() * 100));
         graphPanel.repaint();
     }
 
     // Bezpośrednie wywołanie timera dla statusPanel
     public void notifyVertexOutOfBounds() {
-        statusPanel.notifyError("Uwaga: Próba przesunięcia wierzchołka poza obszar roboczy!", graph.getVertexCount(), graph.getEdgesCount());
+        statusPanel.notifyError("Uwaga: Próba przesunięcia wierzchołka poza obszar roboczy!", graph.getVertexCount(),
+                graph.getEdgesCount());
     }
 
     // Powiadomienie slidera ze spodu GraphPanel
