@@ -1,0 +1,471 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[T1]{fontenc}
+
+\usepackage[polish]{babel}
+
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=2.8cm, right=2.8cm,
+  headheight=22pt
+]{geometry}
+
+\usepackage{xcolor}
+\definecolor{primary}{HTML}{1A1A1A}
+\definecolor{accent}{HTML}{1A1A1A}
+\definecolor{lightbg}{HTML}{F0F0F0}
+\definecolor{codebg}{HTML}{EBEBEB}
+\definecolor{codefg}{HTML}{1A1A1A}
+\definecolor{rulegray}{HTML}{999999}
+% -------------------------------------------------------
+% ZMIANA 1: Dodano kolory dla popup'ow bledow (sekcja 4)
+% -------------------------------------------------------
+\definecolor{errorbg}{HTML}{FDECEA}
+\definecolor{errorframe}{HTML}{C0392B}
+\definecolor{warnbg}{HTML}{FEF9E7}
+\definecolor{warnframe}{HTML}{F39C12}
+
+\usepackage[nobottomtitles*]{titlesec}
+\titleformat{\section}
+  {\color{primary}\large\bfseries}
+  {\color{accent}\thesection.}{0.6em}{}[{\color{rulegray}\titlerule[0.6pt]}]
+\titlespacing{\section}{0pt}{1.4em}{0.7em}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{primary}\textbf{Wizualizacja grafu planarnego}}
+\fancyhead[R]{\small\color{rulegray}Dokumentacja funkcjonalna -- Java}
+\fancyfoot[C]{\small\color{rulegray}\thepage}
+
+\usepackage{enumitem}
+\setlist[itemize]{
+  leftmargin=1.8em,
+  itemsep=0.3em,
+  topsep=0.4em
+}
+\setlist[enumerate]{
+  leftmargin=1.8em,
+  itemsep=0.3em,
+  topsep=0.4em
+}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{cmdbox}{
+  enhanced,
+  colback=codebg,
+  colframe=primary,
+  arc=3pt,
+  boxrule=0.8pt,
+  left=8pt, right=8pt, top=5pt, bottom=5pt,
+  fontupper=\ttfamily\small\color{codefg}
+}
+
+\newtcolorbox{filebox}{
+  enhanced,
+  colback=lightbg,
+  colframe=rulegray,
+  arc=3pt,
+  boxrule=0.6pt,
+  left=10pt, right=10pt, top=6pt, bottom=6pt,
+  fontupper=\ttfamily\small\color{primary}
+}
+
+% -------------------------------------------------------
+% ZMIANA 2: Dodano dwa nowe srodowiska dla popup'ow bledow
+% errorbox  = czerwony (blad krytyczny)
+% warnbox   = zolty  (ostrzezenie)
+% Uzyte po raz pierwszy w sekcji 4 (Sytuacje wyjatkowe)
+% -------------------------------------------------------
+\newtcolorbox{errorbox}[1][]{
+  enhanced,
+  colback=errorbg,
+  colframe=errorframe,
+  arc=3pt,
+  boxrule=1pt,
+  left=8pt, right=8pt, top=5pt, bottom=5pt,
+  title={\bfseries\color{errorframe}\textbullet\ B\l{}\'ad krytyczny #1},
+  fontupper=\ttfamily\small\color{codefg}
+}
+
+\newtcolorbox{warnbox}[1][]{
+  enhanced,
+  colback=warnbg,
+  colframe=warnframe,
+  arc=3pt,
+  boxrule=1pt,
+  left=8pt, right=8pt, top=5pt, bottom=5pt,
+  title={\bfseries\color{warnframe}\textbullet\ Ostrze\.zenie #1},
+  fontupper=\ttfamily\small\color{codefg}
+}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{needspace}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage{float}
+% -------------------------------------------------------
+% ZMIANA 3: Dodano pakiety tikz i forest do schematu GUI
+% -------------------------------------------------------
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{4cm}
+
+  {\fontsize{32}{38}\selectfont Wizualizacja grafu\\planarnego}
+
+  \vspace{0.8cm}
+
+  {\large\scshape\color{rulegray} Dokumentacja funkcjonalna --- cz\k{e}\'s\'c Java}
+
+  \vspace{1.2cm}
+
+  {\small\scshape Wiktor Godula, Przemys\l{}aw Feliniak}
+
+  \vfill
+
+  {\small\color{rulegray} \today}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% =======================================================
+% SEKCJA 1 -- WSTEP
+% =======================================================
+\section{Wst\k{e}p}
+
+Celem projektu jest stworzenie interaktywnej aplikacji okienkowej w j\k{e}zyku Java (technologia Swing), stanowi\k{a}cej uzupe\l{}nienie cz\k{e}\'sci obliczeniowej zrealizowanej w j\k{e}zyku C. Aplikacja wczytuje wyniki dzia\l{}ania programu C (graf planarny wraz z wyliczonymi wsp\'o\l{}rz\k{e}dnymi) i pozwala na ich komfortow\k{a} wizualizacj\k{e}.
+
+Rola wzgl\k{e}dem komponentu~C.
+Aplikacja Java pe\l{}ni rol\k{e} graficznej nakładki steruj\k{a}cej i wizualizuj\k{a}cej wzgl\k{e}dem samodzielnego programu konsolowego \texttt{graf\_planarny} napisanego w j\k{e}zyku~C. Silnik obliczeniowy (plik wykonywalny \texttt{graf\_planarny}) musi by\'c skompilowany i dost\k{e}pny w podkatalogu \texttt{core/} katalogu roboczego aplikacji (np. \texttt{core/graf\_planarny} na Linux/macOS lub \texttt{core/graf\_planarny.exe} na Windows). Aplikacja nie przeszukuje innych ścieżek.
+
+Aplikacja Java zawsze uruchamia \texttt{graf\_planarny} jako osobny proces. Na podstawie wyb\'or\'ow u\.zytkownika dokonanych w Pasku Narz\k{e}dziowym (plik wej\'sciowy z list\k{a} kraw\k{e}dzi, algorytm, liczba iteracji, format zapisu) aplikacja konstruuje i uruchamia polecenie zgodne ze specyfikacj\k{a} programu C opisan\k{a} w dokumentacji ko\'ncowej j\k{e}zyka~C (sekcja~3.1), np.:
+
+\begin{cmdbox}
+./graf\_planarny -i wejscie.txt -o wynik\_tmp.txt -a fr -n 600
+\end{cmdbox}
+
+Wynik zapisywany jest do pliku tymczasowego, kt\'ory aplikacja nast\k{e}pnie parsuje i wy\'swietla w obszarze roboczym. Aplikacja Java nie zawiera w\l{}asnej implementacji algorytm\'ow obliczeniowych --- ca\l{}a logika matematyczna pozostaje wy\l{}\k{a}cznie po stronie programu~C. Aby wywo\l{}anie si\k{e} powiod\l{}o, \'scie\.zka do pliku wykonywalnego \texttt{graf\_planarny} musi by\'c dost\k{e}pna (domy\'slnie: katalog roboczy aplikacji lub zmienna \'srodowiskowa \texttt{PATH}).
+
+Program dostarcza narz\k{e}dzi do wy\'swietlania wczytanych graf\'ow, modyfikacji sposobu ich prezentacji, a tak\.ze manualnej zmiany pozycji w\k{e}z\l{}\'ow i uruchamiania algorytm\'ow przez program C. Dokument ten jest jednocze\'snie instrukcj\k{a} dla u\.zytkownika, specyfikacj\k{a} funkcjonaln\k{a} i opisem architektury przeznaczonym dla zespo\l{}u programistycznego.
+
+% =======================================================
+% SEKCJA 2 -- ZESTAWIENIE GŁÓWNYCH FUNKCJONALNOŚCI
+% =======================================================
+\section{Zestawienie g\l{}ównych funkcjonalno\'sci}
+
+Poni\.zsze punkty przedstawiaj\k{a} kluczowe mo\.zliwo\'sci aplikacji z punktu widzenia u\.zytkownika:
+
+\begin{itemize}
+  \item \textbf{Wczytywanie grafu} --- dwa tryby: \textit{Tekstowy} wczytuje plik z listą krawędzi, \textit{Binarny} wczytuje plik ze współrzędnymi wierzchołków (i dodatkowo odczytuje z tego samego pliku definicje krawędzi jako tekst). Po wczytaniu graf jest automatycznie wyświetlany w obszarze roboczym.
+
+  \item \textbf{Wyb\'or algorytmu} --- mo\.zliwo\'s\'c wyboru algorytmu obliczeniowego: Fruchterman–Reingold lub Tutte. Uruchomienie nast\k{e}puje przez przycisk w panelu narz\k{e}dziowym.
+
+  \item \textbf{Modyfikacja widoku} --- zmiana skali (zoom), przesuwanie obszaru roboczego (pan), automatyczne dopasowanie (Autofit) oraz pokazywanie lub ukrywanie etykiet wierzcho\l{}k\'ow i wag kraw\k{e}dzi. Panel narz\k{e}dziowy mo\.zna zwin\k{a}\'c przyciskiem \texttt{\guillemotleft/\guillemotright} przy lewej kraw\k{e}dzi panelu.
+
+  \item \textbf{Edycja wsp\'o\l{}rz\k{e}dnych} --- interaktywna zmiana po\l{}o\.zenia wierzcho\l{}ka za pomoc\k{a} myszy (metoda drag-and-drop) bezpo\'srednio w obszarze roboczym lub poprzez wpisanie precyzyjnych warto\'sci w panelu narz\k{e}dziowym.
+
+  \item \textbf{Automatyczne skalowanie} --- po wczytaniu danych lub obliczeniu uk\l{}adu, je\'sli wierzcho\l{}ki wykraczaj\k{a} poza wirtualny obszar roboczy ($5000 \times 5000$), aplikacja wy\'swietla okno dialogowe z pytaniem, czy automatycznie przeskalowa\'c wsp\'o\l{}rz\k{e}dne. U\.zytkownik mo\.ze zaakceptowa\'c (\textbf{Tak}) lub odrzuci\'c (\textbf{Nie}).
+
+  \item \textbf{Zapis wynik\'ow} --- eksport obliczonych wsp\'o\l{}rz\k{e}dnych do pliku tekstowego lub binarnego, z mo\.zliwo\'sci\k{a} wyboru lokalizacji i nazwy pliku. Operacja wykonywana jest synchronicznie; po jej zako\'nczeniu pasek statusu wy\'swietla potwierdzenie.
+
+  \item \textbf{Informowanie o b\l{}\k{e}dach} --- wy\'swietlanie modalnych okien dialogowych z opisem problemu (b\l{}\k{e}d krytyczny na czerwono, ostrze\.zenia na \.z\'o\l{}to), bez otwierania dodatkowych okien.
+\end{itemize}
+
+% =======================================================
+% SEKCJA 3 -- OPIS FUNKCJI I INTERFEJSU
+% =======================================================
+\section{Opis funkcji i interfejsu}
+
+Aplikacja, zgodnie ze specyfikacj\k{a}, jest sterowana zdarzeniami w ramach interfejsu GUI zbudowanego w bibliotece Java Swing. Ca\l{}y program dzia\l{}a w jednym g\l{}\'{o}wnym oknie. \.Zadne z podstawowych akcji nie otwiera osobnego niezale\.znego okna --- w zamian stosowane s\k{a}: wbudowane okna dialogowe dla komunikat\'ow i plik\'ow, a tak\.ze okna wyboru pliku jako modalne nakładki.
+
+% -------------------------------------------------------
+% Schemat graficzny interfejsu (diagram tikz)
+% -------------------------------------------------------
+\subsection{Schemat uk\l{}adu interfejsu}
+
+Poni\.zszy diagram przedstawia uk\l{}ad komponent\'ow w g\l{}\'{o}wnym oknie aplikacji:
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  font=\small\sffamily,
+  box/.style={draw=primary, fill=lightbg, rounded corners=3pt,
+              minimum width=#1, minimum height=0.7cm, align=center},
+  box/.default=3cm,
+  outerbox/.style={draw=rulegray, rounded corners=4pt, fill=white,
+                   inner sep=8pt},
+  lbl/.style={font=\scriptsize\ttfamily\color{rulegray}}
+]
+
+\node[outerbox, minimum width=13.5cm, minimum height=9.5cm] (win) at (0,0) {};
+\node[lbl, above=2pt of win.north west, anchor=south west]
+      {G\l{}\'owne okno aplikacji};
+
+\node[box=13cm, fill=codebg, minimum height=0.6cm] (menu) at (0, 4.1)
+      {\textbf{Pasek menu} \quad Plik ~|~ Pomoc};
+
+\node[box=9cm, minimum height=6.8cm, fill=white, draw=accent]
+      (canvas) at (-2.1, 0.2) {\textbf{Obszar roboczy}\\[4pt]renderowanie i podpowiedzi};
+
+% Przycisk zwijania panelu narzędziowego
+\node[box=0.4cm, minimum height=6.8cm, fill=codebg, font=\scriptsize]
+      (toggle) at (2.95, 0.2) {\rotatebox{90}{\guillemotleft/\guillemotright}};
+
+\node[box=3.5cm, minimum height=6.8cm, fill=lightbg]
+      (tools) at (4.9, 0.2) {};
+\node[font=\small\bfseries, above=0pt of tools.north, yshift=-18pt] {Panel Narz\k{e}dzi};
+
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (alg) at (4.9, 2.3)
+      {Wyb\'or algorytmu};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (run) at (4.9, 1.55)
+      {Uruchom};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (fit) at (4.9, 0.8)
+      {Autofit};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (zoom) at (4.9, 0.05)
+      {Zoom +/-};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (coord) at (4.9, -0.7)
+      {Wsp. X / Y};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (apply) at (4.9,-1.5)
+      {Zastosuj};
+\node[box=3cm, minimum height=0.55cm, font=\scriptsize] (vis) at (4.9,-2.3)
+      {Etykiety / Wagi/ Pan};
+
+\node[box=13cm, fill=codebg, minimum height=0.6cm, font=\scriptsize]
+      (status) at (0, -3.7)
+      {\textbf{Pasek statusu:} Stan aplikacji | Wierzchołki: <liczba> | Krawędzie: <liczba>};
+
+\end{tikzpicture}
+\caption{Uk\l{}ad komponent\'ow z uwzgl\k{e}dnieniem statystyk, funkcji Autofit i przycisku zwijania panelu.}
+\end{figure}
+
+
+\subsection{Pasek menu}
+
+Opcje znajdujące się pod menu \texttt{Plik}:
+\begin{itemize}
+  \item \textbf{Wczytaj graf (Tekstowo)} --- otwiera modalne okno wyboru pliku nad głównym oknem. Użytkownik może wybrać plik tekstowy (\texttt{*.txt}) zawierający listę krawędzi. Po wyborze pliku i potwierdzeniu, aplikacja odczytuje definicje krawędzi (w formacie: nazwa, źródło, cel, waga). Wierzchołki, które nie zostały jawnie zdefiniowane, są tworzone automatycznie z domyślnymi współrzędnymi (0,0). Następnie graf jest renderowany w obszarze roboczym.
+  
+  \item \textbf{Wczytaj graf (Binarnie)} --- otwiera modalne okno wyboru pliku binarnego (\texttt{*.bin}). Aplikacja wczytuje współrzędne wierzchołków z binarnego nagłówka (format zgodny z wyjściem programu C), po czym z tego samego pliku próbuje odczytać listę krawędzi jako tekst. Dzięki temu możliwe jest wczytanie grafu, którego dane zostały wcześniej zapisane w formacie hybrydowym (binarne współrzędne + tekstowe krawędzie). Jeśli plik zawiera wyłącznie dane binarne, odczyt krawędzi może się nie powieść.
+
+  \item \textbf{Zapisz wyniki (Tekstowo)} --- otwiera modalne okno zapisu pliku pozwalające użytkownikowi wybrać lokalizację i nazwę pliku tekstowego (\texttt{*.txt}). Zapisuje wyłącznie aktualne współrzędne wszystkich wierzchołków (ID, X, Y) w formacie tekstowym. Operacja jest synchroniczna; po jej zakończeniu pasek statusu wyświetla potwierdzenie.
+
+  \item \textbf{Zapisz wyniki (Binarnie)} --- analogicznie do powyższego, ale z rozszerzeniem \texttt{*.bin}. Zapisuje współrzędne wierzchołków w formacie binarnym (little-endian, 20 bajtów na wierzchołek: int ID, double X, double Y). Format ten jest zgodny z oczekiwaniami silnika C.
+\end{itemize}
+
+\textbf{Uwaga:} Aplikacja nie oferuje funkcji "Zapisz graf" jako oddzielnej operacji. Dostępne są wyłącznie opcje eksportu samych współrzędnych (wyników obliczeń). Pełna definicja grafu (krawędzie wraz z wagami) pozostaje w oryginalnym pliku wejściowym i nie jest modyfikowana przez program.
+
+% -------------------------------------------------------
+% SEKCJA 3.3 (DODATKOWY OPIS PROCESU WCZYTYWANIA)
+% -------------------------------------------------------
+\subsection{Panel narz\k{e}dziowy}
+
+Panel ten daje pe\l{}n\k{a} kontrol\k{e} nad prezentowanymi danymi oraz umo\.zliwia uruchamianie algorytm\'ow przez program C:
+
+\begin{itemize}
+    \item \textbf{Wyb\'or algorytmu} --- rozwijana lista z opcjami \texttt{Fruchterman-Reingold} i \texttt{Tutte} (pe\l{}ne nazwy wy\'swietlane w interfejsie). Wyb\'or jest mapowany na odpowiedni argument \texttt{-a} do \texttt{graf\_planarny} (odpowiednio \texttt{fr} lub \texttt{tutte}). Klikni\k{e}cie przycisku \textbf{Uruchom} buduje i wykonuje polecenie, np.:
+  \begin{cmdbox}
+core/graf\_planarny -i wejscie.txt -o wynik.txt -a tutte -n 500
+  \end{cmdbox}
+  Po zako\'nczeniu procesu wynik jest automatycznie wczytywany i od\'swie\.zany w tym samym obszarze roboczym.
+
+  \item \textbf{Liczba iteracji} --- pole tekstowe okre\'slaj\k{a}ce liczb\k{e} iteracji algorytmu Fruchtermana-Reingolda (domy\'slnie 100). W przypadku algorytmu Tutte pole jest automatycznie wy\l{}\k{a}czane i ustawiane na znak \texttt{-}, poniewa\.z algorytm ten nie korzysta z parametru iteracji.
+
+  \item \textbf{Format danych (C)} --- rozwijana lista umo\.zliwiaj\k{a}ca wyb\'or formatu pliku tymczasowego przekazywanego do silnika C: \texttt{Tekstowy} lub \texttt{Binarny}. Opcja \texttt{Binarny} wymusza dodanie argumentu \texttt{-f bin} do wywo\l{}ania \texttt{graf\_planarny}.
+
+  \item \textbf{Autofit} --- przycisk dopasowuj\k{a}cy automatycznie skal\k{e} i pozycj\k{e} widoku tak, aby ca\l{}y graf by\l{} widoczny w obszarze roboczym.
+
+  \item \textbf{Modyfikacja wsp\'o\l{}rz\k{e}dnych} --- po klikni\k{e}ciu wierzcho\l{}ka na obszarze roboczym jego ID i wsp\'o\l{}rz\k{e}dne ($X$, $Y$) pojawiaj\k{a} si\k{e} w polach tekstowych w Panelu Narz\k{e}dzi. Przycisk \textbf{Zastosuj} przenosi wierzcho\l{}ek i od\'swie\.za widok.
+
+  \item \textbf{Zmiana pola widzenia} --- suwak do zmiany skali (zoom in/out) oraz przycisk prze\l{}\k{a}czaj\k{a}cy tryb przesuwania (pan) obszaru roboczego.
+
+  \item \textbf{Zwijanie panelu} --- po lewej kraw\k{e}dzi Panelu Narz\k{e}dzi znajduje si\k{e} przycisk ze strza\l{}k\k{a} (\texttt{\guillemotleft}/\texttt{\guillemotright}), kt\'ory pozwala schowa\'c lub ponownie wy\'swietli\'c ca\l{}y panel. Dzi\k{e}ki temu u\.zytkownik mo\.ze maksymalizowa\'c widoczno\'s\'c obszaru roboczego.
+
+  \item \textbf{Interakcja z grafem} --- u\.zytkownik mo\.ze chwyci\'c dowolny wierzcho\l{}ek lewym przyciskiem myszy i przesun\k{e}\'c go w dowolne miejsce obszaru roboczego. Wsp\'o\l{}rz\k{e}dne w Panelu Narz\k{e}dzi s\k{a} aktualizowane w czasie rzeczywistym podczas przesuwania.
+
+  \item \textbf{Spos\'ob wy\'swietlania} --- pola wyboru dla etykiet w\k{e}z\l{}\'ow i wag kraw\k{e}dzi.
+
+  \item \textbf{Automatyczne skalowanie} --- po ka\.zdym wczytaniu pliku lub uruchomieniu algorytmu aplikacja sprawdza, czy wsp\'o\l{}rz\k{e}dne wierzcho\l{}k\'ow mieszcz\k{a} si\k{e} w obszarze roboczym ($12$--$4988$). Je\'sli kt\'orykolwiek wierzcho\l{}ek wykracza poza ten zakres, wy\'swietlane jest okno dialogowe z pytaniem: \textit{\guillemotleft{}Wykryto wierzcho\l{}ki poza obszarem roboczym. Czy chcesz je automatycznie przeskalowa\'c do obszaru $5000 \times 5000$?\guillemotright{}}. Po zatwierdzeniu (\textbf{Tak}) wsp\'o\l{}rz\k{e}dne s\k{a} normalizowane z zachowaniem proporcji.
+\end{itemize}
+
+% =======================================================
+% SEKCJA 4 -- FORMATY DANYCH
+% =======================================================
+\section{Formaty wymienianych danych}
+
+Aplikacja rozróżnia dwa rodzaje plików: plik definicji grafu (lista krawędzi, używany jako wejście dla silnika C) oraz plik wynikowy (współrzędne wierzchołków, generowany przez silnik C lub przez funkcję zapisu aplikacji).
+
+\subsection{Format pliku definicji grafu (lista krawędzi)}
+Plik tekstowy (\texttt{*.txt}) zawierający wyłącznie definicje krawędzi – po jednej w każdym wierszu. Aplikacja akceptuje również komentarze (linie zaczynające się od \texttt{\#}) oraz puste linie, które są automatycznie usuwane przed przekazaniem do silnika C.
+
+\textbf{Format pojedynczej linii z krawędzią:}
+
+\begin{filebox}
+<nazwa> <źródło> <cel> <waga>
+\end{filebox}
+
+\begin{itemize}
+  \item \texttt{nazwa} --- identyfikator krawędzi (ciąg znaków bez spacji, np. \texttt{e1}).
+  \item \texttt{źródło}, \texttt{cel} --- identyfikatory wierzchołków (liczby całkowite).
+  \item \texttt{waga} --- liczba zmiennoprzecinkowa (z kropką dziesiętną).
+\end{itemize}
+
+Przykładowy plik wejściowy:
+\begin{filebox}
+\# Graf przykładowy (komentarz) \\
+e1 \quad 1 \quad 2 \quad 1.5\\
+e2 \quad 2 \quad 3 \quad 2.0\\
+e3 \quad 3 \quad 1 \quad 0.8
+\end{filebox}
+
+\textbf{Uwaga:} Plik ten nie zawiera nagłówka ani osobnej listy wierzchołków – są one wyciągane dynamicznie z definicji krawędzi.
+
+\subsection{Format pliku wynikowego (współrzędne wierzchołków)}
+
+Plik generowany przez silnik C (lub przez funkcję zapisu aplikacji) zawiera wyłącznie współrzędne wierzchołków. Dostępne są dwie reprezentacje: tekstowa i binarna.
+
+\subsubsection{Format tekstowy}
+
+Pierwszy wiersz zawiera liczbę wierzchołków~$V$. Każdy kolejny wiersz reprezentuje jeden węzeł:
+
+\begin{filebox}
+V\\
+<id> <x> <y>
+\end{filebox}
+
+\begin{itemize}
+  \item \texttt{id} --- identyfikator węzła (liczba całkowita).
+  \item \texttt{x, y} --- liczby zmiennoprzecinkowe, precyzja do 4 miejsc po przecinku.
+\end{itemize}
+
+Przykładowy plik wynikowy:
+\begin{filebox}
+3\\
+1 \quad0.0000 \quad0.0000\\
+2 \quad1.0000 \quad0.0000\\
+3 \quad1.0000 \quad1.0000
+\end{filebox}
+
+\subsubsection{Format binarny}
+
+Struktura pliku \texttt{.bin} (bez separatorów), \textbf{20 bajtów na wierzchołek}:
+
+\begin{enumerate}
+  \item \textbf{Nagłówek}: 4 bajty --- liczba wierzchołków~$V$ (typ \texttt{int}, little-endian).
+  \item \textbf{Rekord wierzchołka} (powtarzany $V$ razy):
+  \begin{itemize}
+    \item 4 bajty: identyfikator węzła (typ \texttt{int}, w Javie odpowiada nieujemnym wartościom \texttt{unsigned int} z C),
+    \item 8 bajtów: współrzędna $X$ (typ \texttt{double} IEEE~754),
+    \item 8 bajtów: współrzędna $Y$ (typ \texttt{double} IEEE~754).
+  \end{itemize}
+\end{enumerate}
+
+Kolejność bajtów jest zgodna z little-endian (natywna dla platform x86/x86-64), co jest bezpośrednio obsługiwane przez klasę \texttt{FileParser} w Javie poprzez mechanizm odwracania kolejności bajtów.
+
+% =======================================================
+% SEKCJA 5 -- SYTUACJE WYJATKOWE
+% =======================================================
+\section{Sytuacje wyjątkowe}
+
+Wszystkie komunikaty błędów i ostrzeżeń wyświetlane są jako modalne okna dialogowe nad głównym oknem aplikacji. Nie otwierają one nowego niezależnego okna – są zawsze przyklejone do okna głównego. Po kliknięciu \textbf{OK} aplikacja wraca do stabilnego działania.
+
+Stosowane są dwa rodzaje wizualne komunikatów:
+\begin{itemize}
+  \item \textbf{Czerwony popup (błąd krytyczny)} – tytuł okna: \texttt{Błąd}.
+  \item \textbf{Żółty popup (ostrzeżenie)} – tytuł okna: \texttt{Ostrzeżenie}.
+\end{itemize}
+
+\textbf{Uwaga:} Wszystkie błędy pochodzące z silnika C wyświetlane są z przedrostkiem \texttt{"Błąd silnika: "}. Błędy wczytywania plików opatrzone są przedrostkiem \texttt{"Błąd wczytywania: "}, a błędy zapisu – \texttt{"Błąd zapisu: "}. Wyjątkiem jest przeciągnięcie wierzchołka poza widoczny obszar roboczy – wtedy nie jest wyświetlane okno dialogowe, a jedynie tymczasowy komunikat na pasku statusu (opisany na końcu sekcji).
+
+\subsection*{Błędy krytyczne (czerwony popup)}
+
+\begin{itemize}
+  \item \textbf{Nie można uruchomić silnika obliczeniowego} – Wywołanie algorytmu, gdy plik \texttt{graf\_planarny} nie istnieje, nie ma praw do wykonania lub wystąpił błąd wejścia/wyjścia.\\
+  Komunikat: \textit{„Błąd silnika: Nie odnaleziono lub nie można uruchomić pliku wykonywalnego graf\_planarny. Upewnij się, że plik istnieje i posiada prawo do wykonania (np. chmod +x).”}
+
+  \item \textbf{Silnik C nie może otworzyć pliku wejściowego (kod 2)} – Program \texttt{graf\_planarny} zwrócił kod 2.\\
+  Komunikat: \textit{„Błąd silnika: Silnik C nie może otworzyć pliku wejściowego. Sprawdź, czy plik istnieje i czy masz uprawnienia do odczytu.”}
+
+  \item \textbf{Błąd formatu danych w pliku (kod 3)} – Program \texttt{graf\_planarny} zwrócił kod 3.\\
+  Komunikat: \textit{„Błąd silnika: Błąd formatu danych w pliku (kod 3). Upewnij się, że plik krawędzi zawiera poprawne linie (np. 'e1 1 2 1.0') i nie posiada nagłówków ani komentarzy.”}
+
+  \item \textbf{Nie można utworzyć pliku wynikowego przez program C (kod 4)} – Program \texttt{graf\_planarny} zwrócił kod 4.\\
+  Komunikat: \textit{„Błąd silnika: Nie można utworzyć pliku wynikowego przez program C. Sprawdź uprawnienia katalogu docelowego.”}
+
+  \item \textbf{Błąd parametrów (kod 5)} – Program \texttt{graf\_planarny} zwrócił kod 5 (nieznany algorytm).\\
+  Komunikat: \textit{„Błąd silnika: Błąd parametrów (kod 5): Silnik nie rozpoznał nazwy algorytmu. Upewnij się, że przesyłasz 'fr' lub 'tutte'.”}
+
+  \item \textbf{Błąd alokacji pamięci w silniku C (kod 7)} – Program \texttt{graf\_planarny} zwrócił kod 7.\\
+  Komunikat: \textit{„Błąd silnika: Silnik obliczeniowy zgłosił błąd alokacji pamięci (kod 7). Graf może być zbyt duży. Spróbuj zmniejszyć liczbę wierzchołków.”}
+
+  \item \textbf{Graf wejściowy jest niespójny (kod 8)} – Program \texttt{graf\_planarny} zwrócił kod 8.\\
+  Komunikat: \textit{„Błąd silnika: Graf wejściowy jest niespójny (zawiera izolowane składowe). Program C wymaga grafu spójnego. Popraw plik wejściowy.”}
+
+  \item \textbf{Błąd numeryczny w symulacji (kod 9)} – Program \texttt{graf\_planarny} zwrócił kod 9.\\
+  Komunikat: \textit{„Błąd silnika: Wystąpił błąd numeryczny w symulacji (kod 9). Spróbuj uruchomić algorytm ponownie lub zwiększyć liczbę iteracji.”}
+
+  \item \textbf{Pętla własna w pliku wejściowym (kod 12)} – Program \texttt{graf\_planarny} zwrócił kod 12.\\
+  Komunikat: \textit{„Błąd silnika: Plik wejściowy zawiera pętlę własną (krawędź do samego siebie). Algorytmy nie obsługują tego rodzaju połączeń.”}
+
+  \item \textbf{Graf zbyt gęsty / nieplanarny (kod 13)} – Program \texttt{graf\_planarny} zwrócił kod 13.\\
+  Komunikat: \textit{„Błąd silnika: Graf jest zbyt gęsty, by mógł być planarny (E > 3V - 6). Zmniejsz liczbę krawędzi lub użyj innego grafu.”}
+
+  \item \textbf{Nieoczekiwany błąd silnika} – Program \texttt{graf\_planarny} zwrócił kod inny niż wymienione powyżej.\\
+  Komunikat: \textit{„Błąd silnika: Nieoczekiwany błąd silnika obliczeniowego (kod X).”} (gdzie X to kod błędu)
+
+  \item \textbf{Błąd wczytywania pliku (nieprawidłowy format)} – Wystąpił błąd podczas parsowania pliku tekstowego (przy wczytywaniu grafu przez menu lub przez silnik C). Komunikat pochodzi z klasy \texttt{FileParser}.\\
+  Komunikat: \textit{„Błąd wczytywania pliku! Oczekiwano danych w formacie: <węzeł> <x> <y>. Odnaleziono niedozwolone znaki w linii N.”} (gdzie N to numer linii)
+
+  \item \textbf{Błąd wczytywania (inny)} – Inny wyjątek podczas wczytywania pliku, np. brak pliku.\\
+  Komunikat: \textit{„Błąd wczytywania: ”} + szczegółowa treść błędu systemowego.
+
+  \item \textbf{Plik binarny uszkodzony lub niekompletny} – Wczytywanie pliku \texttt{.bin}, gdy jego długość nie zgadza się z deklarowaną liczbą wierzchołków.\\
+  Komunikat: \textit{„Błąd wczytywania: Plik binarny jest uszkodzony lub niekompletny. Oczekiwano N bajtów, znaleziono M bajtów.”}
+
+  \item \textbf{Błąd zapisu pliku} – Wystąpił błąd wejścia/wyjścia podczas zapisywania współrzędnych.\\
+  Komunikat: \textit{„Błąd zapisu: ”} + szczegółowa treść błędu systemowego.
+\end{itemize}
+
+\subsection*{Ostrzeżenia (żółty popup)}
+
+\begin{itemize}
+  \item \textbf{Brak pliku wejściowego przed uruchomieniem algorytmu} – Kliknięcie \textbf{Uruchom}, gdy użytkownik nie wybrał jeszcze żadnego pliku z listą krawędzi.\\
+  Komunikat: \textit{„Najpierw wczytaj plik z listą krawędzi!”}
+
+  \item \textbf{Graf jest pusty} – Próba uruchomienia algorytmu na grafie bez wierzchołków.\\
+  Komunikat: \textit{„Graf jest pusty. Wczytaj poprawne dane przed uruchomieniem algorytmu.”}
+
+  \item \textbf{Nieprawidłowa liczba iteracji} – W polu iteracji wpisano wartość nie będącą dodatnią liczbą całkowitą.\\
+  Komunikat: \textit{„Liczba iteracji musi być całkowitą liczbą dodatnią!”}
+
+  \item \textbf{Współrzędna poza dopuszczalnym zakresem} – Kliknięcie \textbf{Zastosuj}, gdy wprowadzona współrzędna jest mniejsza niż 12 lub większa niż 4988.\\
+  Komunikat: \textit{„Współrzędne muszą znajdować się w obszarze roboczym (12 - 4988).”}
+
+  \item \textbf{Niepoprawna wartość współrzędnej (pole tekstowe)} – Kliknięcie \textbf{Zastosuj}, gdy w polach X lub Y znajduje się wartość nieskończona lub \texttt{NaN}.\\
+  Komunikat: \textit{„Współrzędne muszą być skończonymi liczbami rzeczywistymi.”}
+
+  \item \textbf{Niepoprawny format liczby w polu współrzędnych} – Gdy wpisana wartość nie jest liczbą.\\
+  Komunikat: \textit{„Wprowadzona wartość nie jest poprawną liczbą. Użyj formatu np. 123.45”}
+\end{itemize}
+
+\subsection*{Komunikat na pasku statusu (bez okna dialogowego)}
+
+\textbf{Próba umieszczenia wierzchołka poza widocznym obszarem roboczym} – Przeciągnięcie i upuszczenie wierzchołka w miejsce poza obszarem roboczym. Wierzchołek zostaje zablokowany na najbliższym brzegu. Na pasku statusu pojawia się na 3 sekundy komunikat: \\
+\textit{„Uwaga: Próba przesunięcia wierzchołka poza obszar roboczy!”} \\
+Po tym czasie pasek statusu wraca do standardowego podsumowania (liczba wierzchołków i krawędzi).
+
+Aby zminimalizować występowanie błędów po stronie interfejsu, komponenty są blokowane z zachowaniem spójności --- opcje eksportu, \textbf{Uruchom} oraz \textbf{Zastosuj} są dezaktywowane, dopóki nie zostanie wczytany model grafu.
+
+\end{document}

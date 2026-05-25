@@ -1,0 +1,803 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{fix-cm}
+\usepackage{amsmath}
+\usepackage[scaled=0.85]{beramono}
+
+\usepackage[polish]{babel}
+
+\usepackage{etoolbox}
+\preto{\enumerate}{\par\nobreak}
+
+\usepackage[
+  top=2.5cm, bottom=2.5cm,
+  left=2.8cm, right=2.8cm,
+  headheight=22pt
+]{geometry}
+
+\usepackage{tocloft}
+\setlength{\cftbeforesecskip}{0.3em}
+\setlength{\cftbeforesubsecskip}{0pt}
+
+\usepackage{xcolor}
+\definecolor{primary}{HTML}{1A1A1A}
+\definecolor{accent}{HTML}{1A1A1A}
+\definecolor{lightbg}{HTML}{F0F0F0}
+\definecolor{codebg}{HTML}{EBEBEB}
+\definecolor{codefg}{HTML}{1A1A1A}
+\definecolor{rulegray}{HTML}{999999}
+
+\usepackage[nobottomtitles*]{titlesec}
+\titleformat{\section}
+  {\color{primary}\large\bfseries}
+  {\color{accent}\thesection.}{0.6em}{}[{\color{rulegray}\titlerule[0.6pt]}]
+\titleformat{\subsection}
+  {\color{primary}\normalsize\bfseries}
+  {\color{accent}\thesubsection.}{0.5em}{}
+\titlespacing{\section}{0pt}{1.4em}{0.7em}
+\titlespacing{\subsection}{0pt}{1.0em}{0.4em}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{primary}\textbf{Wizualizacja grafu planarnego}}
+\fancyhead[R]{\small\color{rulegray}Dokumentacja implementacyjna -- Java}
+\fancyfoot[C]{\small\color{rulegray}\thepage}
+
+\usepackage{enumitem}
+\setlist[itemize]{
+  leftmargin=1.8em,
+  itemsep=0.3em,
+  topsep=0.4em
+}
+
+\usepackage{tcolorbox}
+\tcbuselibrary{skins, breakable}
+
+\newtcolorbox{cmdbox}{
+  enhanced,
+  colback=codebg,
+  colframe=primary,
+  arc=3pt,
+  boxrule=0.8pt,
+  left=8pt, right=8pt, top=5pt, bottom=5pt,
+  fontupper=\ttfamily\small\color{codefg}
+}
+
+\newtcolorbox{filebox}{
+  enhanced,
+  colback=lightbg,
+  colframe=rulegray,
+  arc=3pt,
+  boxrule=0.6pt,
+  left=10pt, right=10pt, top=6pt, bottom=6pt,
+  fontupper=\ttfamily\small\color{primary}
+}
+
+\usepackage[hidelinks]{hyperref}
+\usepackage{needspace}
+\usepackage{booktabs}
+\usepackage{array}
+
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{4cm}
+
+  {\fontsize{32}{38}\selectfont Wizualizacja grafu\\planarnego}
+
+  \vspace{0.8cm}
+
+  {\large\scshape\color{rulegray} Dokumentacja implementacyjna -- cz\k{e}\'s\'c Java}
+
+  \vspace{1.2cm}
+
+  {\small\scshape Wiktor Godula\\ Przemys\l{}aw Feliniak}
+
+  \vfill
+
+  {\small\color{rulegray} \today}
+
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ============================================================
+\section{Wstęp}
+% ============================================================
+
+Dokument stanowi przewodnik po kodzie źródłowym aplikacji okienkowej
+\texttt{Wizualizacja grafu planarnego} --- narzędzia napisanego w języku
+Java (biblioteka Swing), pełniącego rolę graficznej nakładki na program
+obliczeniowy wykonany w języku C. Dokumentacja opisuje podział systemu
+na moduły, wewnętrzne struktury danych, architekturę interfejsu
+użytkownika, przepływ sterowania, zasady komunikacji między komponentami
+oraz zastosowane wzorce projektowe. Jej celem jest ułatwienie zrozumienia,
+pielęgnacji i rozbudowy kodu.
+
+Aplikacja Java nie implementuje własnych algorytmów obliczeniowych.
+Cała logika matematyczna pozostaje po stronie zewnętrznego
+programu \texttt{graf\_planarny}, uruchamianego jako osobny proces
+przez klasę \texttt{CalculationEngine}. Aplikacja odpowiada wyłącznie
+za prezentację grafu, interakcję z użytkownikiem oraz przekazywanie
+danych do i z silnika C.
+
+% ============================================================
+\section{Struktura plików i podział na moduły}
+% ============================================================
+
+Kod źródłowy podzielony jest na dziesi\k{e}\'c modu\l{}\'ow, ka\.zdy reprezentowany
+przez osobny plik \texttt{.java}. Jedynymi typami danych współdzielonymi
+między modułami są \texttt{Graph}, \texttt{Vertex} i \texttt{Edge},
+reprezentujące model grafu.
+
+\begin{center}
+\begin{tabular}{>{\ttfamily}l p{9.2cm}}
+\toprule
+\normalfont\textbf{Plik} & \textbf{Odpowiedzialno\'s\'c} \\
+\midrule
+Main.java            & Punkt wejścia aplikacji. Główne okno \texttt{JFrame}, koordynacja wszystkich komponentów GUI, obsługa zdarzeń wysokiego poziomu (wczytywanie, zapis, uruchamianie algorytmu). \\
+\addlinespace
+Graph.java           & Definicja struktury grafu: mapa wierzchołków \texttt{TreeMap<Integer, Vertex>}, lista krawędzi \texttt{List<Edge>}, obliczanie obwiedni (bounds). \\
+\addlinespace
+Vertex.java          & Pojedynczy wierzchołek: identyfikator \texttt{id} oraz współrzędne \texttt{x}, \texttt{y} z akcesorami. \\
+\addlinespace
+Edge.java            & Pojedyncza krawędź: nazwa, referencje do wierzchołków źródłowego i docelowego, waga. \\
+\addlinespace
+FileParser.java      & Operacje wejścia/wyjścia: wczytywanie grafu (tekstowe i binarne), zapis wyników (tekstowy i binarny), konwersja little-endian $\leftrightarrow$ big-endian. \\
+\addlinespace
+CalculationEngine.java & Uruchamianie zewnętrznego programu \texttt{graf\_planarny} (C) jako procesu potomnego, interpretacja kodów powrotu. \\
+\addlinespace
+GraphPanel.java      & Komponent \texttt{JPanel} odpowiedzialny za renderowanie grafu, obsługę myszy (zaznaczanie, przeciąganie wierzchołków, tryb przesuwania), skalowanie i autofit. \\
+\addlinespace
+AppToolPanel.java    & Panel narzędziowy (prawy): wybór algorytmu, liczba iteracji, format danych, zoom, edycja współrzędnych, widoczność etykiet i wag. \\
+\addlinespace
+AppMenuBar.java      & Pasek menu: opcje wczytywania grafu (tekstowo i binarnie), zapisu wyników (tekstowo/binarnie) oraz okno pomocy. \\
+\addlinespace
+AppStatusPanel.java  & Pasek statusu (dolny): wyświetlanie bieżącego stanu aplikacji, liczby wierzchołków i krawędzi oraz tymczasowych komunikatów o błędach. \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Zależności między modułami}
+
+Centralnym punktem zależności jest klasa \texttt{Main}, która posiada
+referencje do wszystkich pozostałych komponentów i pełni rolę mediatora.
+Pozostałe zależności są następujące:
+
+\begin{itemize}
+  \item \texttt{GraphPanel} otrzymuje referencje do \texttt{Graph} (model)
+    oraz do \texttt{Main} (do komunikacji zwrotnej),
+  \item \texttt{AppToolPanel} otrzymuje referencje do \texttt{Main}
+    oraz \texttt{GraphPanel} (do bezpośredniego sterowania zoomem),
+  \item \texttt{AppMenuBar} i \texttt{AppStatusPanel} komunikują się
+    z \texttt{Main} przez wywołania zwrotne (listenery),
+  \item \texttt{FileParser}, \texttt{CalculationEngine} oraz
+    \texttt{Graph} są klasami pomocniczymi wywoływanymi przez \texttt{Main},
+    nie posiadają własnych zależności do GUI,
+  \item \texttt{Vertex} i \texttt{Edge} są prostymi strukturami danych
+    wykorzystywanymi przez \texttt{Graph}, \texttt{GraphPanel}
+    i \texttt{FileParser}.
+\end{itemize}
+
+W architekturze zastosowano wzorzec \textbf{Mediator} (rolę mediatora
+pełni klasa \texttt{Main}) oraz \textbf{Observer} (słuchacze zdarzeń
+Swing, np. \texttt{ActionListener} w menu i przyciskach). Dzięki takiej
+strukturze komponenty GUI nie komunikują się ze sobą bezpośrednio,
+lecz zawsze za pośrednictwem \texttt{Main}, co upraszcza zarządzanie
+spójnością stanu interfejsu.
+
+% ============================================================
+\section{Struktury danych}
+% ============================================================
+
+Podstawowe struktury danych reprezentujące graf zdefiniowane są
+w osobnych plikach \texttt{Vertex.java}, \texttt{Edge.java}
+oraz \texttt{Graph.java}. W odróżnieniu od części C, gdzie dominują
+tablice dynamiczne i ręczne zarządzanie pamięcią, w części Java
+wykorzystywane są kolekcje z biblioteki standardowej
+(\texttt{TreeMap}, \texttt{ArrayList}).
+
+\subsection{Vertex --- wierzchołek grafu}
+
+\begin{filebox}
+public class Vertex \{\\
+\quad int id;\\
+\quad double x, y;\\
+\\
+\quad public Vertex(int id, double x, double y);\\
+\quad public double getX();\\
+\quad public double getY();\\
+\quad public void setX(double x);\\
+\quad public void setY(double y);\\
+\}
+\end{filebox}
+
+Klasa przechowuje identyfikator wierzchołka (\texttt{id}) oraz jego
+bieżące współrzędne $(x, y)$ w wirtualnym obszarze roboczym
+$[0, 5000] \times [0, 5000]$. Pola są pakietowo dostępne (modyfikator
+domyślny), co umożliwia szybki dostęp z \texttt{GraphPanel} (renderowanie)
+bez narzutu wywołań getterów/setterów w pętli rysowania. Metody
+\texttt{getX()} i \texttt{getY()} są zachowane dla klas zewnętrznych
+względem pakietu.
+
+\subsection{Edge --- krawędź grafu}
+
+\begin{filebox}
+public class Edge \{\\
+\quad private String name;\\
+\quad private Vertex source;\\
+\quad private Vertex target;\\
+\quad private double weight;\\
+\\
+\quad public Edge(String name, Vertex source,\\
+\quad \qquad\qquad\; Vertex target, double weight);\\
+\quad public String getName();\\
+\quad public double getWeight();\\
+\quad public Vertex getSource();\\
+\quad public Vertex getTarget();\\
+\}
+\end{filebox}
+
+Klasa przechowuje nazwę krawędzi, referencje do obiektów \texttt{Vertex}
+(źródło i cel) oraz wagę (liczba zmiennoprzecinkowa podwójnej precyzji).
+Referencje do wierzchołków umożliwiają bezpośredni dostęp do współrzędnych
+podczas rysowania, bez konieczności wyszukiwania w mapie.
+
+\subsection{Graph --- główna struktura grafu}
+
+\begin{filebox}
+public class Graph \{\\
+\quad Map<Integer, Vertex> vertices = new TreeMap<>();\\
+\quad List<Edge> edges = new ArrayList<>();\\
+\quad private double minX, maxX, minY, maxY;\\
+\\
+\quad public void addVertex(int id, double x, double y);\\
+\quad public void addEdge(String name, int sId, int tId,\\
+\quad \qquad\qquad\qquad\quad\;\; double weight);\\
+\quad public int getVertexCount();\\
+\quad public int getEdgesCount();\\
+\quad public Map<Integer, Vertex> getVertices();\\
+\quad public void calculateBounds();\\
+\quad public double getMinX();\\
+\quad public double getMaxX();\\
+\quad public double getMinY();\\
+\quad public double getMaxY();\\
+\quad public void clear();\\
+\}
+\end{filebox}
+
+Wierzchołki przechowywane są w mapie \texttt{TreeMap<Integer, Vertex>},
+co gwarantuje kolejność rosnącą według identyfikatora podczas iteracji
+(np. przy zapisie wyników) i zapewnia średni czas dostępu $O(\log V)$.
+Krawędzie przechowywane są w liście \texttt{ArrayList<Edge>}.
+
+Metoda \texttt{addEdge} automatycznie wyszukuje wierzchołki źródłowy
+i docelowy w mapie; jeśli oba istnieją, tworzy nowy obiekt \texttt{Edge}
+i dodaje go do listy. W przeciwnym razie krawędź jest ignorowana
+(co zapobiega niespójności danych).
+
+Pola \texttt{minX}, \texttt{maxX}, \texttt{minY}, \texttt{maxY}
+przechowują obwiednię grafu obliczaną przez \texttt{calculateBounds()}.
+Są one wykorzystywane przez \texttt{GraphPanel} do automatycznego
+skalowania (\texttt{autofit()}).
+
+% ============================================================
+\section{Moduł \texttt{FileParser} --- wejście/wyjście}
+% ============================================================
+
+Klasa \texttt{FileParser} zawiera całą logikę związaną z odczytem
+i zapisem plików. Wszystkie publiczne metody operują na przekazanym
+obiekcie \texttt{Graph}, modyfikując go przez jego metody publiczne.
+
+\subsection{Metody prywatne --- wczytywanie}
+
+Wczytywanie danych odbywa się przez trzy metody prywatne, wywoływane
+w zależności od formatu pliku:
+
+\begin{itemize}
+  \item \texttt{readVertices(String path, Graph graph)} --- wczytuje
+    plik tekstowy zawierający listę wierzchołków (pierwsza linia: liczba
+    wierzchołków; kolejne: \texttt{id x y}). Używana do odczytu plików
+    wynikowych generowanych przez silnik C lub przez funkcję zapisu.
+    Format wejściowy używa kropki dziesiętnej (\texttt{Locale.US}).
+
+  \item \texttt{readEdges(String path, Graph graph)} --- wczytuje
+    plik tekstowy z listą krawędzi w formacie \texttt{nazwa zrodlo cel waga}.
+    Jeśli napotkany wierzchołek nie istnieje jeszcze w grafie, jest
+    automatycznie tworzony z domyślną pozycją $(0, 0)$. Metoda pomija
+    linie niepasujące do formatu (zabezpieczenie \texttt{hasNextInt()}
+    przed wyjątkiem).
+
+  \item \texttt{readBinary(String path, Graph graph)} --- wczytuje
+    binarny plik wynikowy w formacie little-endian (zgodnym z wyjściem
+    programu C na platformie x86). Struktura pliku: 4 bajty --- liczba
+    wierzchołków $V$ (\texttt{int}), następnie $V$ rekordów po 20 bajtów
+    każdy (\texttt{int id}, \texttt{double x}, \texttt{double y}).
+    Konwersja little-endian $\rightarrow$ big-endian realizowana jest
+    przez wewnętrzne odwracanie kolejności bajtów w buforze.
+    Po wczytaniu wywoływane jest \texttt{calculateBounds()}.
+\end{itemize}
+
+\subsection{Metody publiczne}
+
+\subsubsection{loadFullGraph}
+
+\begin{cmdbox}
+public void loadFullGraph(String nodePath, String edgePath,\\
+\quad\qquad\qquad\qquad\quad\; Graph graph, boolean binary)\\
+\quad\qquad\qquad\qquad\quad\; throws Exception;
+\end{cmdbox}
+
+\textbf{Parametry:}
+\begin{itemize}
+  \item \texttt{nodePath} --- ścieżka do pliku z listą wierzchołków
+    (wynikowego z silnika C); dla trybu binarnego traktowana również
+    jako źródło danych binarnych,
+  \item \texttt{edgePath} --- ścieżka do pliku z listą krawędzi,
+  \item \texttt{graph} --- obiekt grafu do wypełnienia,
+  \item \texttt{binary} --- jeśli \texttt{true}, wierzchołki wczytywane
+    są z pliku binarnego (\texttt{readBinary}); jeśli \texttt{false},
+    z tekstowego (\texttt{readVertices}).
+\end{itemize}
+
+\textbf{Działanie:} Wczytuje wierzchołki (z formatu tekstowego lub
+binarnego), a następnie krawędzie (zawsze z pliku tekstowego
+\texttt{edgePath}). Czyszczenie grafu (\texttt{graph.clear()}) odbywa się wewnątrz metod \texttt{readVertices()} i \texttt{readBinary()}, nie bezpośrednio w \texttt{loadFullGraph()}.
+
+\textbf{Zwraca:} nic; w przypadku błędu rzuca \texttt{Exception}
+z opisem problemu.
+
+\subsubsection{saveToText}
+
+\begin{cmdbox}
+public void saveToText(String path, Graph graph) throws Exception;
+\end{cmdbox}
+
+Zapisuje współrzędne wszystkich wierzchołków do pliku tekstowego.
+Pierwsza linia zawiera liczbę wierzchołków. Każda kolejna linia:
+\texttt{id x y} z precyzją 4 miejsc po przecinku
+(\texttt{printf("\%d \%.4f \%.4f\textbackslash n")}). Używa \texttt{Locale.US}
+dla wymuszenia kropki dziesiętnej.
+
+\subsubsection{saveToBinary}
+
+\begin{cmdbox}
+public void saveToBinary(String path, Graph graph) throws Exception;
+\end{cmdbox}
+
+Zapisuje współrzędne do pliku binarnego w formacie little-endian
+(kompatybilnym z programem C). Używa \texttt{ByteBuffer} z kolejnością
+bajtów \texttt{LITTLE\_ENDIAN}. Struktura: 4 bajty --- liczba
+wierzchołków, następnie rekordy 20-bajtowe (\texttt{int id},
+\texttt{double x}, \texttt{double y}).
+
+% ============================================================
+\section{Moduł \texttt{CalculationEngine} --- silnik obliczeniowy}
+% ============================================================
+
+Klasa \texttt{CalculationEngine} odpowiada za uruchomienie zewnętrznego
+programu \texttt{graf\_planarny} (C) jako procesu potomnego oraz za
+interpretację jego kodu powrotu.
+
+\subsection{runGraphAlgorithm}
+
+\begin{cmdbox}
+public void runGraphAlgorithm(String inputPath,\\
+\quad\qquad\qquad\qquad\qquad\; String algorithm,\\
+\quad\qquad\qquad\qquad\qquad\; int iterations,\\
+\quad\qquad\qquad\qquad\qquad\; boolean binary,\\
+\quad\qquad\qquad\qquad\qquad\; Graph graph)\\
+\quad\qquad\qquad\qquad\qquad\; throws Exception;
+\end{cmdbox}
+
+\textbf{Parametry:}
+\begin{itemize}
+  \item \texttt{inputPath} --- ścieżka do pliku wejściowego z listą krawędzi,
+  \item \texttt{algorithm} --- nazwa algorytmu (\texttt{"fr"} lub
+    \texttt{"tutte"}); przekazywana jako argument \texttt{-a},
+  \item \texttt{iterations} --- liczba iteracji (dla FR); przekazywana
+    jako argument \texttt{-n},
+  \item \texttt{binary} --- jeśli \texttt{true}, dodaje flagę
+    \texttt{-f bin} do polecenia,
+  \item \texttt{graph} --- obiekt grafu, do którego zostaną wczytane
+    wyniki po pomyślnym zakończeniu procesu.
+\end{itemize}
+
+\textbf{Działanie:}
+\begin{enumerate}
+  \item Ustala ścieżkę do pliku wykonywalnego: \texttt{core/graf\_planarny}
+    (Linux/macOS) lub \texttt{core/graf\_planarny.exe} (Windows).
+  \item Buduje listę argumentów: \texttt{-i <inputPath>},
+    \texttt{-o wynik.txt}, \texttt{-a <algorithm>},
+    \texttt{-n <iterations>} oraz opcjonalnie \texttt{-f bin}.
+  \item Uruchamia proces przez \texttt{ProcessBuilder}.
+  \item Oczekuje na zakończenie procesu (\texttt{waitFor()}).
+  \item Jeśli kod powrotu to 0, wywołuje \texttt{FileParser.loadFullGraph}
+    dla pliku \texttt{wynik.txt} i ścieżki wejściowej.
+  \item Jeśli kod powrotu $\neq$ 0, rzuca \texttt{Exception}
+    z komunikatem odpowiadającym kodowi błędu (mapowanie kodów
+    realizowane jest wewnątrz klasy).
+  \item Jeśli proces nie może zostać uruchomiony (\texttt{IOException}),
+    rzuca \texttt{Exception} z komunikatem o braku pliku wykonywalnego.
+\end{enumerate}
+
+% ============================================================
+\section{Moduł \texttt{GraphPanel} --- panel renderowania grafu}
+% ============================================================
+
+Klasa \texttt{GraphPanel} rozszerza \texttt{JPanel} i odpowiada za całą
+wizualną reprezentację grafu oraz interakcję myszą.
+
+\subsection{Obszar roboczy i układ współrzędnych}
+
+Wirtualny obszar roboczy ma stały rozmiar $5000 \times 5000$ pikseli
+(\texttt{WORK\_WIDTH}, \texttt{WORK\_HEIGHT}). Współrzędne wierzchołków
+przechowywane w obiektach \texttt{Vertex} odnoszą się do tego wirtualnego
+obszaru. Podczas renderowania stosowane jest przekształcenie afiniczne:
+
+\begin{enumerate}
+  \item \textbf{Translacja} --- środek wirtualnego obszaru roboczego
+    jest wyrównywany ze środkiem widocznego panelu. Dodatkowo stosowane
+    jest przesunięcie \texttt{offsetX}/\texttt{offsetY} (tryb pan).
+  \item \textbf{Skalowanie} --- współczynnik \texttt{zoom} (domyślnie
+    $0.5$, zakres od $\max(W_{\text{panelu}}/5000,\; H_{\text{panelu}}/5000)$
+    do $2.0$) jest kontrolowany suwakiem w panelu narzędziowym.
+\end{enumerate}
+
+Transformacja realizowana jest przez wywołania \texttt{g2.translate(tx, ty)}
+i \texttt{g2.scale(zoom, zoom)} przed pętlą rysowania. Dzięki temu
+rysowanie wierzchołków i krawędzi odbywa się bezpośrednio na podstawie
+współrzędnych wirtualnych.
+
+\subsection{Obsługa myszy}
+
+Wewnętrzna klasa anonimowa \texttt{MouseAdapter} obsługuje trzy rodzaje
+interakcji:
+
+\begin{itemize}
+  \item \textbf{Kliknięcie (mousePressed)} --- jeśli tryb \texttt{panMode}
+    jest aktywny, zapamiętuje pozycję myszy do późniejszego przesuwania.
+    W przeciwnym razie przeszukuje wierzchołki w promieniu
+    $2 \cdot V\_RAD$ (metoda \texttt{findVertex}) i ustawia znaleziony
+    obiekt jako \texttt{selectedVertex}.
+
+  \item \textbf{Przeciąganie (mouseDragged)} --- w trybie pan:
+    aktualizuje \texttt{offsetX}/\texttt{offsetY} o wektor przesunięcia
+    myszy i ogranicza przesunięcie do granic obszaru roboczego
+    (\texttt{clampOffsets()}). W trybie edycji: przesuwa zaznaczony
+    wierzchołek do pozycji kursora (z ograniczeniem do widocznego
+    obszaru i do granic wirtualnego obszaru roboczego). Przekroczenie
+    granic zgłaszane jest do \texttt{Main.notifyVertexOutOfBounds()}.
+\end{itemize}
+
+\subsection{Autofit}
+
+Metoda \texttt{autofit()} oblicza obwiednię grafu, wyznacza skalę
+tak, aby graf zajmował ok. 80\% widocznego obszaru, i odpowiednio
+przeskalowuje współrzędne wszystkich wierzchołków. Po przeskalowaniu
+graf jest centrowany w wirtualnym obszarze $5000 \times 5000$.
+
+\subsection{Normalizacja do obszaru roboczego}
+
+Metoda \texttt{normalizeToWorkspace()} skaluje i przesuwa współrzędne
+wszystkich wierzchołków tak, aby zmieściły się w obszarze
+$[12, 4988] \times [12, 4988]$ z zachowaniem proporcji. Wywoływana
+jest warunkowo z metody \texttt{Main.updateUIState()} --- jeśli po wczytaniu pliku lub uruchomieniu algorytmu wierzchołki wykraczają poza granice obszaru roboczego, wyświetlany jest dialog potwierdzenia (\texttt{JOptionPane.YES\_NO\_OPTION}), a po zatwierdzeniu przez użytkownika wywoływana jest \texttt{normalizeToWorkspace()}.
+
+\subsection{Renderowanie}
+
+Metoda \texttt{paintComponent} wykonuje kolejno:
+\begin{enumerate}
+  \item Ograniczenie przesunięcia kamery (\texttt{clampOffsets()}).
+  \item Obliczenie translacji. Zastosowanie \texttt{translate} i \texttt{scale}.
+  \item Narysowanie tła obszaru roboczego (jasnoszary prostokąt
+    $5000 \times 5000$) i jego ramki.
+  \item Narysowanie wszystkich krawędzi jako linii (ciemnoszary).
+    Opcjonalnie wyświetlenie wag w punkcie środkowym krawędzi
+    (gdy \texttt{showWeights == true}).
+  \item Narysowanie wszystkich wierzchołków jako okręgów o promieniu
+    \texttt{V\_RAD = 12}. Wierzchołek zaznaczony (\texttt{selectedVertex})
+    wypełniany jest kolorem białym, pozostałe --- czarnym.
+    Opcjonalnie wyświetlenie etykiet (gdy \texttt{showLabels == true}).
+\end{enumerate}
+
+% ============================================================
+\section{Pozostałe moduły GUI}
+% ============================================================
+
+\subsection{AppMenuBar}
+
+Rozszerza \texttt{JMenuBar}. Tworzy dwa menu:
+
+\begin{itemize}
+  \item \textbf{Plik} --- zawiera opcje:
+    \begin{itemize}
+      \item \texttt{Wczytaj graf (Tekstowo)} --- wywołuje \texttt{parent.openFile(false)},
+      \item \texttt{Wczytaj graf (Binarnie)} --- wywołuje \texttt{parent.openFile(true)},
+      \item separator,
+      \item \texttt{Zapisz wyniki (Tekstowo)} --- wywołuje
+        \texttt{parent.saveAction(false)},
+      \item \texttt{Zapisz wyniki (Binarnie)} --- wywołuje
+        \texttt{parent.saveAction(true)}.
+    \end{itemize}
+  \item \textbf{Pomoc} --- zawiera opcję \texttt{Instrukcja i dokumentacja},
+    wyświetlającą modalne okno dialogowe ze skróconą instrukcją obsługi
+    i odesłaniem do pełnej dokumentacji.
+\end{itemize}
+
+\subsection{AppToolPanel}
+
+Rozszerza \texttt{JPanel} z układem \texttt{BoxLayout} (oś Y).
+Podzielony na cztery sekcje wizualne:
+
+\begin{enumerate}
+  \item \textbf{Ustawienia silnika} --- rozwijana lista algorytmów
+    (\texttt{Fruchterman-Reingold} / \texttt{Tutte}), pole iteracji
+    (nieaktywne dla Tutte), rozwijana lista formatu danych
+    (\texttt{Tekstowy} / \texttt{Binarny}), przycisk \texttt{Uruchom}.
+  \item \textbf{Widok} --- suwak zoom (zakres $5\%$--$200\%$ na sliderze,
+    efektywne minimum ograniczane dynamicznie przez \texttt{GraphPanel.getMinZoom()},
+    które zapobiega oddaleniu poniżej rozmiaru widocznego panelu),
+    przycisk \texttt{Autofit}.
+  \item \textbf{Edycja wierzchołka} --- pola tekstowe $X$ i $Y$,
+    etykieta z ID zaznaczonego wierzchołka, przycisk \texttt{Zastosuj}.
+  \item \textbf{Widoczność} --- pola wyboru: \texttt{Etykiety},
+    \texttt{Wagi}, \texttt{Przesuwanie (Pan)}.
+\end{enumerate}
+
+Komunikacja z \texttt{Main} odbywa się przez referencję \texttt{parent},
+a z \texttt{GraphPanel} przez referencję \texttt{graphPanel} (do
+bezpośredniego ustawiania zoomu). Metody dostępowe
+(\texttt{getSelectedAlgorithm()}, \texttt{isBinaryFormat()},
+\texttt{getIterations()}, \texttt{setIterationsEnabled()},
+\texttt{setVertexInfo()},
+\texttt{getXText()}, \texttt{getYText()},
+\texttt{setXText()}, \texttt{setYText()},
+\texttt{updateZoomSlider()}) umożliwiają \texttt{Main}
+pobieranie i ustawianie wartości kontrolek.
+
+\subsection{AppStatusPanel}
+
+Rozszerza \texttt{JPanel}. Wyświetla bieżący stan aplikacji w formacie:
+
+\begin{filebox}
+Stan: <komunikat> | Wierzchołki: <N> | Krawędzie: <M>
+\end{filebox}
+
+Metoda \texttt{notifyError} wyświetla tymczasowy komunikat o błędzie
+(kolor czerwony), który po 3 sekundach (\texttt{Timer}) automatycznie
+powraca do poprzedniego stanu. Mechanizm ten stosowany jest wyłącznie
+dla ostrzeżeń o próbie przesunięcia wierzchołka poza obszar roboczy ---
+wszystkie pozostałe błędy obsługiwane są przez modalne okna dialogowe
+\texttt{JOptionPane} w klasie \texttt{Main}.
+
+% ============================================================
+\section{Moduł \texttt{Main} --- punkt wejścia i przepływ sterowania}
+% ============================================================
+
+Klasa \texttt{Main} rozszerza \texttt{JFrame} i pełni rolę:
+\begin{itemize}
+  \item punktu wejścia aplikacji (metoda \texttt{main}),
+  \item głównego okna (tytuł: \texttt{"Wizualizacja grafu planarnego"}),
+  \item mediatora między wszystkimi komponentami GUI,
+  \item kontrolera przepływu sterowania.
+\end{itemize}
+
+\subsection{Metoda \texttt{main}}
+
+\begin{cmdbox}
+public static void main(String[] args);
+\end{cmdbox}
+
+Wywołuje \texttt{SwingUtilities.invokeLater()} z konstruktorem
+\texttt{Main}, co zapewnia utworzenie GUI w wątku EDT (Event Dispatch
+Thread), zgodnie z wymaganiami Swing.
+
+\subsection{Konstruktor \texttt{Main()}}
+
+Wykonuje inicjalizację wszystkich komponentów:
+\begin{enumerate}
+  \item Tworzy obiekty modelu (\texttt{Graph}), parsera (\texttt{FileParser})
+    i silnika (\texttt{CalculationEngine}).
+  \item Tworzy \texttt{GraphPanel} i przekazuje mu referencje do grafu
+    oraz do siebie.
+  \item Ustawia \texttt{AppMenuBar} jako pasek menu okna.
+  \item Tworzy \texttt{AppToolPanel} (prawy panel narzędziowy)
+    i \texttt{AppStatusPanel} (dolny pasek statusu).
+  \item Rozmieszcza komponenty w układzie \texttt{BorderLayout}:
+    \texttt{GraphPanel} w centrum, kontener \texttt{rightContainer}
+    (zawierający przycisk zwijania \texttt{toggleBtn} i \texttt{AppToolPanel})
+    po prawej stronie, pasek statusu na dole. Przycisk \texttt{toggleBtn}
+    (symbole \texttt{\guillemotleft}/\texttt{\guillemotright}) przełącza widoczność panelu narzędziowego.
+  \item Dezaktywuje panel narzędziowy do czasu wczytania pierwszego pliku.
+  \item Wywołuje \texttt{graphPanel.autofit()} po wyrenderowaniu UI.
+\end{enumerate}
+
+\subsection{Główne metody sterujące}
+
+\subsubsection{openFile}
+
+\begin{cmdbox}
+public void openFile(boolean binary);
+\end{cmdbox}
+
+Otwiera modalne okno wyboru pliku (\texttt{JFileChooser}). Po wyborze:
+\begin{enumerate}
+  \item Czyści graf (\texttt{graph.clear()}).
+  \item W trybie binarnym wczytuje dane przez
+    \texttt{parser.loadFullGraph(..., true)}.
+  \item W trybie tekstowym:
+    \begin{enumerate}
+      \item Wywołuje prywatną metodę pomocniczą \texttt{prepareCleanedFile()},
+        która tworzy plik tymczasowy pozbawiony komentarzy (linii zaczynających się
+        od \texttt{\#}) i pustych linii. Plik tymczasowy oznaczany jest przez
+        \texttt{deleteOnExit()}.
+      \item Wywołuje przez refleksję prywatną metodę \texttt{readEdges}
+        klasy \texttt{FileParser} dla oczyszczonego pliku.
+    \end{enumerate}
+  \item Aktywuje panel narzędziowy.
+  \item Aktualizuje stan UI (\texttt{updateUIState()}).
+\end{enumerate}
+W przypadku błędu wyświetla okno dialogowe z komunikatem.
+
+\subsubsection{runAlgorithm}
+
+\begin{cmdbox}
+public void runAlgorithm();
+\end{cmdbox}
+
+Wywoływana przez przycisk \texttt{Uruchom} w panelu narzędziowym.
+Waliduje stan (czy wczytano plik, czy graf nie jest pusty), parsuje
+parametry (algorytm, liczba iteracji, format), a następnie wywołuje
+\texttt{engine.runGraphAlgorithm()}. Po pomyślnym zakończeniu odświeża
+widok (\texttt{autofit()}) i pasek statusu. W przypadku błędu wyświetla
+komunikat z prefiksem \texttt{"Błąd silnika: "}.
+
+\subsubsection{applyCoords}
+
+\begin{cmdbox}
+public void applyCoords();
+\end{cmdbox}
+
+Wywoływana przez przycisk \texttt{Zastosuj} w panelu edycji wierzchołka.
+Waliduje wprowadzone współrzędne: sprawdza, czy mieszczą się w obszarze
+roboczym $[12, 4988]$, a następnie czy są skończonymi liczbami
+rzeczywistymi (tj.\ nie są \texttt{NaN} ani nieskończone).
+Następnie aktualizuje pozycję zaznaczonego wierzchołka i odświeża widok.
+W przypadku błędu formatu lub przekroczenia zakresu wyświetla ostrzeżenie.
+
+\subsubsection{saveAction}
+
+\begin{cmdbox}
+public void saveAction(boolean binary);
+\end{cmdbox}
+
+Otwiera modalne okno zapisu pliku (\texttt{JFileChooser}).
+W zależności od flagi \texttt{binary} wywołuje \texttt{parser.saveToText()}
+lub \texttt{parser.saveToBinary()}.
+
+\subsubsection{updateUIState}
+
+\begin{cmdbox}
+private void updateUIState(String msg);
+\end{cmdbox}
+
+Wspólna metoda aktualizacji stanu całego interfejsu, wywoływana po każdej
+operacji modyfikującej graf (wczytanie pliku, uruchomienie algorytmu).
+Wykonuje kolejno:
+\begin{enumerate}
+  \item Aktualizuje pasek statusu (komunikat, liczba wierzchołków i krawędzi).
+  \item Wywołuje \texttt{graphPanel.autofit()} w celu dopasowania widoku.
+  \item Sprawdza, czy współrzędne wierzchołków mieszczą się w obszarze roboczym ($12$--$4988$). Jeśli nie, wyświetla modalne okno dialogowe (\texttt{JOptionPane.YES\_NO\_OPTION}) z pytaniem o automatyczne przeskalowanie.
+  \item Po zatwierdzeniu wywołuje \texttt{graphPanel.normalizeToWorkspace()}.
+  \item Synchronizuje suwak zoomu z bieżącą wartością.
+\end{enumerate}
+
+% ============================================================
+\section{Zarządzanie pamięcią i zasobami}
+% ============================================================
+
+Zarządzanie pamięcią w części Java opiera się
+na automatycznym odśmiecaniu (Garbage Collector). Niemniej program
+przestrzega kilku zasad:
+
+\begin{itemize}
+  \item \textbf{Referencje} --- obiekty \texttt{Vertex} są współdzielone
+    między mapą \texttt{Graph.vertices} a listą krawędzi
+    (\texttt{Edge.source}, \texttt{Edge.target}). Dzięki temu zmiana
+    współrzędnych wierzchołka jest natychmiast widoczna we wszystkich
+    krawędziach, bez konieczności synchronizacji.
+  \item \textbf{Czyszczenie grafu} --- metoda \texttt{Graph.clear()}
+    usuwa wszystkie referencje z mapy i listy, co umożliwia GC
+    zwolnienie pamięci po starych obiektach.
+  \item \textbf{Pliki tymczasowe} --- pliki tworzone przez aplikację
+    (np. przy czyszczeniu komentarzy) są oznaczane przez
+    \texttt{deleteOnExit()}, co zapewnia ich usunięcie przy zamykaniu JVM
+    nawet w przypadku nieoczekiwanego zakończenia programu.
+  \item \textbf{Strumienie} --- \texttt{Scanner} i \texttt{PrintWriter}
+    są używane w blokach \texttt{try-with-resources}, co gwarantuje
+    automatyczne zamknięcie strumieni po zakończeniu operacji.
+  \item \textbf{Procesy zewnętrzne} --- proces \texttt{graf\_planarny}
+    jest uruchamiany przez \texttt{ProcessBuilder}; metoda
+    \texttt{waitFor()} blokuje wątek do zakończenia procesu,
+    zapobiegając wyciekom procesów.
+\end{itemize}
+
+% ============================================================
+\section{Kompilacja i uruchamianie}
+% ============================================================
+
+\subsection{Wymagania}
+
+\begin{itemize}
+  \item Java SE 8 lub nowsza,
+  \item skompilowany program \texttt{graf\_planarny} (C) umieszczony
+    w podkatalogu \texttt{core/} katalogu roboczego aplikacji,
+  \item system operacyjny z graficznym środowiskiem okienkowym,
+  \item (opcjonalnie) narzędzie \texttt{make} do uproszczonej kompilacji.
+\end{itemize}
+
+\subsection{Metoda uproszczona (zalecana)}
+
+W głównym katalogu projektu znajduje się plik \texttt{Makefile},
+który automatyzuje proces kompilacji i uruchomienia. Aby zbudować
+i wystartować aplikację, wystarczy wykonać:
+
+\begin{cmdbox}
+make
+\end{cmdbox}
+
+Polecenie to kompiluje wszystkie pliki \texttt{.java} i natychmiast
+uruchamia GUI. Jeśli silnik C w folderze \texttt{core/} nie był jeszcze
+budowany, należy uprzednio wykonać:
+
+\begin{cmdbox}
+cd core\\
+make\\
+cd ..
+\end{cmdbox}
+
+\subsection{Kompilacja ręczna}
+
+W przypadku braku narzędzia \texttt{make} można skompilować projekt
+bezpośrednio:
+
+\begin{cmdbox}
+\# Kompilacja wszystkich plików źródłowych:\\
+javac -encoding UTF-8 gui/*.java
+\end{cmdbox}
+
+W wyniku powstają pliki \texttt{.class} w katalogu \texttt{gui/}.
+Aplikację uruchamia się poleceniem:
+
+\begin{cmdbox}
+java -cp gui Main
+\end{cmdbox}
+
+\subsection{Struktura katalogów wdrożeniowych}
+
+\begin{filebox}
+katalog\_projektu/\\
+\quad core/\\
+\quad \quad graf\_planarny \quad\# (Linux/macOS)\\
+\quad \quad graf\_planarny.exe \quad\# (Windows)\\
+\quad gui/\\
+\quad \quad *.java \quad\# pliki źródłowe\\
+\quad \quad *.class \quad\# skompilowane klasy Java\\
+\quad Makefile
+\end{filebox}
+
+Program C musi mieć prawo do wykonania (na systemach Unix:
+\texttt{chmod +x core/graf\_planarny}). Aplikacja Java nie przeszukuje
+innych ścieżek --- oczekuje pliku wykonywalnego dokładnie w podkatalogu
+\texttt{core/} bieżącego katalogu roboczego.
+
+\end{document}

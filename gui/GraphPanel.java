@@ -142,7 +142,7 @@ public class GraphPanel extends JPanel {
         if (gWidth == 0) gWidth = 100;
         if (gHeight == 0) gHeight = 100;
 
-        // Skalujemy tak, aby graf zajmował ok 80% mniejszego z wymiarów widocznego okna
+        // Obliczamy skalę tak, aby graf zajmował ok 80% widocznego panelu
         double targetW = getWidth() - 100;
         double targetH = getHeight() - 100;
         if (targetW <= 0) targetW = 600;
@@ -150,23 +150,29 @@ public class GraphPanel extends JPanel {
 
         double scale = Math.min(targetW / gWidth, targetH / gHeight);
         if (scale > 5.0) scale = 5.0; // Nie powiększaj małych grafów zbyt mocno
-        scale = Math.max(scale, getMinZoom()); // Zabezpieczenie przed zbytnim oddaleniem
+        scale = Math.max(scale, getMinZoom());
 
-        this.zoom = scale; // Synchronizacja zooma
+        // Zoom = 1.0, bo współrzędne wierzchołków są skalowane bezpośrednio
+        // Ustawiamy je tak, żeby przy zoom=1 graf był wycentrowany i widoczny
+        this.zoom = 1.0;
+        this.zoom = Math.max(this.zoom, getMinZoom());
         if (parent != null) {
-            parent.updateZoomSlider((int)(scale * 100));
+            parent.updateZoomSlider((int)(this.zoom * 100));
         }
 
         // Środek wirtualnego obszaru roboczego
         double centerX = WORK_WIDTH / 2.0;
         double centerY = WORK_HEIGHT / 2.0;
 
-        double offsetX = centerX - (gWidth * scale) / 2.0;
-        double offsetY = centerY - (gHeight * scale) / 2.0;
+        // Skalujemy i centrujemy wierzchołki w obszarze roboczym
+        double scaledWidth = gWidth * scale;
+        double scaledHeight = gHeight * scale;
+        double ofsX = centerX - scaledWidth / 2.0;
+        double ofsY = centerY - scaledHeight / 2.0;
         
         for (Vertex v : graph.getVertices().values()) {
-            v.setX(offsetX + (v.getX() - minX) * scale);
-            v.setY(offsetY + (v.getY() - minY) * scale);
+            v.setX(ofsX + (v.getX() - minX) * scale);
+            v.setY(ofsY + (v.getY() - minY) * scale);
         }
         repaint();
     }

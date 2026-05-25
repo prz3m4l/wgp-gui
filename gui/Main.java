@@ -56,9 +56,14 @@ public class Main extends JFrame {
         setPanelEnabled(toolPanel, false);
 
         // Zmuszenie do dopasowania skalowania po wyrenderowaniu UI
+        // Używamy Timer z opóźnieniem, aby panel miał prawidłowe wymiary
         SwingUtilities.invokeLater(() -> {
-            graphPanel.autofit();
-            toolPanel.updateZoomSlider((int) (graphPanel.getZoom() * 100));
+            Timer initTimer = new Timer(150, ev -> {
+                graphPanel.autofit();
+                toolPanel.updateZoomSlider((int) (graphPanel.getZoom() * 100));
+            });
+            initTimer.setRepeats(false);
+            initTimer.start();
         });
     }
 
@@ -131,7 +136,7 @@ public class Main extends JFrame {
                     : currentInputPath;
             engine.runGraphAlgorithm(pathToUse, algoParam, iterations, isBinary, graph);
 
-            graphPanel.autofit();
+            // autofit jest wywoływany wewnątrz updateUIState — nie duplikujemy
             updateUIState("Obliczono układ (" + selectedAlgo + ")");
         } catch (Exception ex) {
             showError("Błąd silnika: " + ex.getMessage());
@@ -220,25 +225,37 @@ public class Main extends JFrame {
     private void updateUIState(String msg) {
         statusPanel.updateState(msg, graph.getVertexCount(), graph.getEdgesCount());
 
-        graphPanel.autofit();
+        // Odświeżamy panel, żeby wierzchołki się wyrysowały
+        graphPanel.revalidate();
+        graphPanel.repaint();
 
-        if (graph.getVertexCount() > 0) {
-            graph.calculateBounds();
-            if (graph.getMinX() < 12 || graph.getMaxX() > 4988 ||
-                    graph.getMinY() < 12 || graph.getMaxY() > 4988) {
+        // Autofit z opóźnieniem — czekamy aż panel się wyrenderuje i ma prawidłowe wymiary
+        // Sprawdzenie granic odbywa się PO autofit, żeby nie pytać o skalowanie na surowych współrzędnych
+        Timer autofitTimer = new Timer(100, ev -> {
+            graphPanel.autofit();
+            updateZoomSlider((int) (graphPanel.getZoom() * 100));
 
-                int option = JOptionPane.showConfirmDialog(this,
-                        "Wykryto wierzchołki poza obszarem roboczym. Czy chcesz je automatycznie przeskalować do obszaru 5000x5000?",
-                        "Wierzchołki poza obszarem", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            // Teraz sprawdzamy granice — po autofit wierzchołki powinny być w obszarze
+            if (graph.getVertexCount() > 0) {
+                graph.calculateBounds();
+                if (graph.getMinX() < 12 || graph.getMaxX() > 4988 ||
+                        graph.getMinY() < 12 || graph.getMaxY() > 4988) {
 
-                if (option == JOptionPane.YES_OPTION) {
-                    graphPanel.normalizeToWorkspace();
+                    int option = JOptionPane.showConfirmDialog(Main.this,
+                            "Wykryto wierzchołki poza obszarem roboczym. Czy chcesz je automatycznie przeskalować do obszaru 5000x5000?",
+                            "Wierzchołki poza obszarem", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+                    if (option == JOptionPane.YES_OPTION) {
+                        graphPanel.normalizeToWorkspace();
+                        graphPanel.autofit();
+                    }
                 }
             }
-        }
 
-        updateZoomSlider((int) (graphPanel.getZoom() * 100));
-        graphPanel.repaint();
+            graphPanel.repaint();
+        });
+        autofitTimer.setRepeats(false);
+        autofitTimer.start();
     }
 
     // Bezpośrednie wywołanie timera dla statusPanel
