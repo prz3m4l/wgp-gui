@@ -563,23 +563,21 @@ AppStatusPanel.java  & Pasek statusu (dolny): wyświetlanie bieżącego stanu ap
 
 \subsection{Zależności między modułami}
 
-Centralnym punktem zależności jest klasa \texttt{Main}, która posiada
-referencje do wszystkich pozostałych komponentów i pełni rolę mediatora.
-Pozostałe zależności są następujące:
+Klasa \texttt{Main} zna wszystkie pozostałe komponenty i~zarządza
+komunikacją między nimi. Pozostałe powiązania:
 
 \begin{itemize}
-  \item \texttt{GraphPanel} otrzymuje referencje do \texttt{Graph} (model)
-    oraz do \texttt{Main} (do komunikacji zwrotnej),
-  \item \texttt{AppToolPanel} otrzymuje referencje do \texttt{Main}
-    oraz \texttt{GraphPanel} (do bezpośredniego sterowania zoomem),
-  \item \texttt{AppMenuBar} i \texttt{AppStatusPanel} komunikują się
-    z \texttt{Main} przez wywołania zwrotne (listenery),
-  \item \texttt{FileParser}, \texttt{CalculationEngine} oraz
-    \texttt{Graph} są klasami pomocniczymi wywoływanymi przez \texttt{Main},
-    nie posiadają własnych zależności do GUI,
-  \item \texttt{Vertex} i \texttt{Edge} są prostymi strukturami danych
-    wykorzystywanymi przez \texttt{Graph}, \texttt{GraphPanel}
-    i \texttt{FileParser}.
+  \item \texttt{GraphPanel} korzysta z~\texttt{Graph} (dane grafu)
+    i~\texttt{Main} (powiadamianie o~zdarzeniach),
+  \item \texttt{AppToolPanel} korzysta z~\texttt{Main}
+    i~\texttt{GraphPanel} (sterowanie zoomem),
+  \item \texttt{AppMenuBar} i~\texttt{AppStatusPanel} zgłaszają
+    akcje do \texttt{Main} przez listenery,
+  \item \texttt{FileParser}, \texttt{CalculationEngine} i~\texttt{Graph}
+    to klasy pomocnicze --- nie wiedzą o~GUI,
+  \item \texttt{Vertex} i~\texttt{Edge} to proste struktury danych
+    używane przez \texttt{Graph}, \texttt{GraphPanel}
+    i~\texttt{FileParser}.
 \end{itemize}
 
 % ============================================================

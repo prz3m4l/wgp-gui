@@ -35,9 +35,6 @@ public class GraphPanel extends JPanel {
         else offsetY = Math.max(-limitY, Math.min(offsetY, limitY));
     }
 
-    @SuppressWarnings("unused")
-    private void keepParent() { if (parent != null) parent.toString(); }
-
     public GraphPanel(Graph graph, Main parent) {
         // Konfiguracja panelu i obsługa myszy
         this.graph = graph;
